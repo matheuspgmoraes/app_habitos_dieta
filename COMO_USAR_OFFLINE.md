@@ -79,3 +79,4 @@ vercel --prod
 - Faça push do código
 - Configure GitHub Pages para servir a pasta `dist`
 
+

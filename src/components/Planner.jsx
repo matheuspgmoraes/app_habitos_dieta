@@ -1,42 +1,42 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useStorage } from '../hooks/useStorage';
 import { getWeekStart } from '../utils/storage';
 import { getWorkoutTime, isWorkDay } from '../utils/calculations';
 
 const DEFAULT_INGREDIENTS = {
   carbos: [
-    { id: 'arroz', name: 'Arroz', icon: '🍚' },
-    { id: 'feijao', name: 'Feijão', icon: '🫘' },
-    { id: 'cuscuz', name: 'Cuscuz', icon: '🌾' },
-    { id: 'pao-integral', name: 'Pão Integral', icon: '🍞' }
+    { id: 'arroz', name: 'Arroz', icon: '🍚', unit: 'g' },
+    { id: 'feijao', name: 'Feijão', icon: '🫘', unit: 'g' },
+    { id: 'cuscuz', name: 'Cuscuz', icon: '🌾', unit: 'g' },
+    { id: 'pao-integral', name: 'Pão Integral', icon: '🍞', unit: 'g' }
   ],
   proteinas: [
-    { id: 'frango-cubos', name: 'Frango em Cubos', icon: '🍗' },
-    { id: 'frango-desfiado', name: 'Frango Desfiado', icon: '🍗' },
-    { id: 'frango-empanado', name: 'Frango Empanado', icon: '🍗' },
-    { id: 'sobrecoxa', name: 'Sobrecoxa', icon: '🍗' },
-    { id: 'carne-moida', name: 'Carne Moída', icon: '🥩' },
-    { id: 'ovos', name: 'Ovos', icon: '🥚' }
+    { id: 'frango-cubos', name: 'Frango em Cubos', icon: '🍗', unit: 'g' },
+    { id: 'frango-desfiado', name: 'Frango Desfiado', icon: '🍗', unit: 'g' },
+    { id: 'frango-empanado', name: 'Frango Empanado', icon: '🍗', unit: 'g' },
+    { id: 'sobrecoxa', name: 'Sobrecoxa', icon: '🍗', unit: 'g' },
+    { id: 'carne-moida', name: 'Carne Moída', icon: '🥩', unit: 'g' },
+    { id: 'ovos', name: 'Ovos', icon: '🥚', unit: 'un' }
   ],
   saladas: [
-    { id: 'alface', name: 'Alface', icon: '🥬' },
-    { id: 'tomate', name: 'Tomate', icon: '🍅' },
-    { id: 'cebola', name: 'Cebola', icon: '🧅' },
-    { id: 'cenoura', name: 'Cenoura', icon: '🥕' },
-    { id: 'beterraba', name: 'Beterraba', icon: '🍠' },
-    { id: 'repolho', name: 'Repolho', icon: '🥬' }
+    { id: 'alface', name: 'Alface', icon: '🥬', unit: 'porção' },
+    { id: 'tomate', name: 'Tomate', icon: '🍅', unit: 'porção' },
+    { id: 'cebola', name: 'Cebola', icon: '🧅', unit: 'porção' },
+    { id: 'cenoura', name: 'Cenoura', icon: '🥕', unit: 'porção' },
+    { id: 'beterraba', name: 'Beterraba', icon: '🍠', unit: 'porção' },
+    { id: 'repolho', name: 'Repolho', icon: '🥬', unit: 'porção' }
   ],
   frutas: [
-    { id: 'maca', name: 'Maçã', icon: '🍎' },
-    { id: 'uva', name: 'Uva', icon: '🍇' },
-    { id: 'morango', name: 'Morango', icon: '🍓' },
-    { id: 'manga', name: 'Manga', icon: '🥭' },
-    { id: 'mamao', name: 'Mamão', icon: '🍈' }
+    { id: 'maca', name: 'Maçã', icon: '🍎', unit: 'un' },
+    { id: 'uva', name: 'Uva', icon: '🍇', unit: 'un' },
+    { id: 'morango', name: 'Morango', icon: '🍓', unit: 'un' },
+    { id: 'manga', name: 'Manga', icon: '🥭', unit: 'un' },
+    { id: 'mamao', name: 'Mamão', icon: '🍈', unit: 'un' }
   ],
   outros: [
-    { id: 'whey', name: 'Whey Protein', icon: '🥤' },
-    { id: 'castanhas', name: 'Castanhas', icon: '🥜' },
-    { id: 'nozes', name: 'Nozes', icon: '🌰' }
+    { id: 'whey', name: 'Whey Protein', icon: '🥤', unit: 'g' },
+    { id: 'castanhas', name: 'Castanhas', icon: '🥜', unit: 'g' },
+    { id: 'nozes', name: 'Nozes', icon: '🌰', unit: 'g' }
   ]
 };
 
@@ -44,34 +44,162 @@ export default function Planner() {
   const { data, updatePlanner, updateData } = useStorage();
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
   const [mealMode, setMealMode] = useState({}); // { mealType: 'recipe' | 'individual' }
+  const processedDatesRef = useRef(new Set()); // Rastrear datas já processadas
+
+  // Pré-marcar atividades baseadas em daysOfWeek (apenas uma vez quando o dia é selecionado)
+  // IMPORTANTE: Este useEffect deve estar ANTES de qualquer return condicional
+  useEffect(() => {
+    if (!data || !selectedDate || !data.planner) return;
+    
+    // Verificar se já processou esta data
+    if (processedDatesRef.current.has(selectedDate)) return;
+    
+    const currentActivities = data.activities || {
+      vôlei: { name: 'Vôlei', icon: '🏐', time: '20:00', daysOfWeek: [1, 3] },
+      academia: { name: 'Academia', icon: '💪', time: null, daysOfWeek: [2, 4, 5, 6] }
+    };
+    
+    let dayIndex = data.planner.findIndex(d => d.date === selectedDate);
+    
+    // Se o dia não existe, criar primeiro
+    if (dayIndex === -1) {
+      const date = new Date(selectedDate);
+      const dayOfWeek = date.getDay();
+      const newDay = {
+        date: selectedDate,
+        meals: {
+          cafe: { time: '07:00', recipeId: null, recipeName: null, items: [] },
+          lancheManha: { time: '09:00', recipeId: null, recipeName: null, items: [] },
+          almoco: { time: '12:30', recipeId: null, recipeName: null, items: [] },
+          lancheTarde: { time: '15:30', recipeId: null, recipeName: null, items: [] },
+          jantar: { time: dayOfWeek === 1 || dayOfWeek === 3 ? '18:00' : '18:30', recipeId: null, recipeName: null, items: [] },
+          posTreino: { time: (dayOfWeek === 1 || dayOfWeek === 3) ? '22:00' : null, recipeId: null, recipeName: null, items: [] }
+        },
+        activities: []
+      };
+      const updated = { ...data };
+      updated.planner.push(newDay);
+      updated.planner.sort((a, b) => new Date(a.date) - new Date(b.date));
+      updateData(updated);
+      processedDatesRef.current.add(selectedDate);
+      return; // Retornar aqui para evitar processar novamente neste ciclo
+    }
+
+    const dayActivities = data.planner[dayIndex]?.activities || [];
+    const currentDayOfWeek = new Date(selectedDate).getDay();
+    let needsUpdate = false;
+    const newActivities = [...dayActivities];
+    const updated = JSON.parse(JSON.stringify(data)); // Deep copy para evitar mutação
+
+    Object.entries(currentActivities).forEach(([id, activity]) => {
+      const daysOfWeek = activity.daysOfWeek || [];
+      if (daysOfWeek.includes(currentDayOfWeek) && !dayActivities.includes(id)) {
+        newActivities.push(id);
+        needsUpdate = true;
+        
+        // Criar hábito automaticamente se não existir
+        const habitId = `activity-${id}`;
+        const existingHabit = updated.dailyHabits?.find(h => h.id === habitId);
+        if (!existingHabit) {
+          if (!updated.dailyHabits) updated.dailyHabits = [];
+          updated.dailyHabits.push({
+            id: habitId,
+            name: activity.name,
+            icon: activity.icon,
+            type: 'boolean',
+            target: 1,
+            frequency: 'daily'
+          });
+        }
+      }
+    });
+
+    if (needsUpdate) {
+      updated.planner[dayIndex].activities = newActivities;
+      updateData(updated);
+    }
+    
+    processedDatesRef.current.add(selectedDate); // Marcar como processado
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedDate]);
 
   if (!data) return <div className="p-4">Carregando...</div>;
+
+  // Garantir que planner existe
+  if (!data.planner || !Array.isArray(data.planner)) {
+    return <div className="p-4">Erro: Planner não inicializado. Recarregue a página.</div>;
+  }
 
   // Usar ingredientes do storage ou padrão
   const individualItems = data.ingredients || DEFAULT_INGREDIENTS;
 
-  const weekStart = getWeekStart(new Date());
+  // Últimos 7 dias + próximos 7 dias (14 dias total)
+  const today = new Date();
   const week = [];
-  for (let i = 0; i < 7; i++) {
-    const date = new Date(weekStart);
-    date.setDate(weekStart.getDate() + i);
+  // Últimos 7 dias
+  for (let i = 6; i >= 0; i--) {
+    const date = new Date(today);
+    date.setDate(today.getDate() - i);
+    week.push(date.toISOString().split('T')[0]);
+  }
+  // Próximos 7 dias
+  for (let i = 1; i <= 7; i++) {
+    const date = new Date(today);
+    date.setDate(today.getDate() + i);
     week.push(date.toISOString().split('T')[0]);
   }
 
-  const selectedDay = data.planner.find(d => d.date === selectedDate);
-  const dayOfWeek = new Date(selectedDate).getDay();
-  const isWork = isWorkDay(selectedDate);
-  const dayActivities = selectedDay?.activities || [];
-  
   // Obter atividades disponíveis
   const activities = data.activities || {
     vôlei: { name: 'Vôlei', icon: '🏐', time: '20:00', daysOfWeek: [1, 3] },
     academia: { name: 'Academia', icon: '💪', time: null, daysOfWeek: [2, 4, 5, 6] }
   };
 
+  // Obter ou criar dia do planner
+  const getOrCreateDay = (dateStr) => {
+    const dayIndex = data.planner.findIndex(d => d.date === dateStr);
+    if (dayIndex === -1) {
+      // Criar dia se não existir (mas não atualizar ainda para evitar re-render)
+      const date = new Date(dateStr);
+      const dayOfWeek = date.getDay();
+      return {
+        date: dateStr,
+        meals: {
+          cafe: { time: '07:00', recipeId: null, recipeName: null, items: [] },
+          lancheManha: { time: '09:00', recipeId: null, recipeName: null, items: [] },
+          almoco: { time: '12:30', recipeId: null, recipeName: null, items: [] },
+          lancheTarde: { time: '15:30', recipeId: null, recipeName: null, items: [] },
+          jantar: { time: dayOfWeek === 1 || dayOfWeek === 3 ? '18:00' : '18:30', recipeId: null, recipeName: null, items: [] },
+          posTreino: { time: (dayOfWeek === 1 || dayOfWeek === 3) ? '22:00' : null, recipeId: null, recipeName: null, items: [] }
+        },
+        activities: []
+      };
+    }
+    return data.planner[dayIndex];
+  };
+
+  // Garantir que planner existe
+  if (!data.planner || !Array.isArray(data.planner)) {
+    return <div className="p-4">Erro: Planner não inicializado. Recarregue a página.</div>;
+  }
+
+  const selectedDay = getOrCreateDay(selectedDate);
+  const dayOfWeek = new Date(selectedDate).getDay();
+  const isWork = isWorkDay(selectedDate);
+  const dayActivities = selectedDay?.activities || [];
+
   const handleActivityToggle = (activityId) => {
     const updated = { ...data };
-    const dayIndex = updated.planner.findIndex(d => d.date === selectedDate);
+    let dayIndex = updated.planner.findIndex(d => d.date === selectedDate);
+    
+    // Criar dia se não existir
+    if (dayIndex === -1) {
+      const newDay = getOrCreateDay(selectedDate);
+      updated.planner.push(newDay);
+      updated.planner.sort((a, b) => new Date(a.date) - new Date(b.date));
+      dayIndex = updated.planner.findIndex(d => d.date === selectedDate);
+    }
+    
     if (dayIndex === -1) return;
 
     const currentActivities = updated.planner[dayIndex].activities || [];
@@ -162,6 +290,7 @@ export default function Planner() {
       recipeName: recipe?.name || '',
       items: null
     };
+    // updatePlanner já cria o dia se não existir
     updatePlanner(selectedDate, mealType, mealData);
     setMealMode({ ...mealMode, [mealType]: 'recipe' });
   };
@@ -172,19 +301,39 @@ export default function Planner() {
       time: mealTimes[mealType],
       recipeId: null,
       recipeName: null,
-      items: selectedItems
+      items: selectedItems // Array de objetos { id, quantity }
     };
+    // updatePlanner já cria o dia se não existir
     updatePlanner(selectedDate, mealType, mealData);
     setMealMode({ ...mealMode, [mealType]: 'individual' });
   };
 
-  // Toggle item individual
-  const toggleIndividualItem = (mealType, itemId) => {
+  // Toggle item individual ou atualizar quantidade
+  const toggleIndividualItem = (mealType, itemId, quantity = 1) => {
     const meal = selectedDay?.meals[mealType] || { items: [] };
     const currentItems = meal.items || [];
-    const newItems = currentItems.includes(itemId)
-      ? currentItems.filter(id => id !== itemId)
-      : [...currentItems, itemId];
+    
+    // Converter formato antigo (array de strings) para novo (array de objetos)
+    const normalizedItems = currentItems.map(item => 
+      typeof item === 'string' ? { id: item, quantity: 1 } : item
+    );
+    
+    const existingIndex = normalizedItems.findIndex(item => item.id === itemId);
+    let newItems;
+    
+    if (existingIndex >= 0) {
+      // Se já existe, remover ou atualizar quantidade
+      if (quantity <= 0) {
+        newItems = normalizedItems.filter(item => item.id !== itemId);
+      } else {
+        newItems = [...normalizedItems];
+        newItems[existingIndex] = { id: itemId, quantity };
+      }
+    } else {
+      // Adicionar novo item
+      newItems = [...normalizedItems, { id: itemId, quantity }];
+    }
+    
     handleItemsSelect(mealType, newItems);
   };
 
@@ -207,9 +356,10 @@ export default function Planner() {
             onClick={() => setMealMode({ ...mealMode, [mealType]: 'recipe' })}
             className={`flex-1 px-3 py-2 rounded-lg text-sm font-medium transition-all ${
               currentMode === 'recipe'
-                ? 'bg-green-600 text-white'
-                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                ? 'text-white'
+                : 'bg-[#eaeaea] text-gray-700 hover:bg-[#c0d6df]'
             }`}
+            style={currentMode === 'recipe' ? { backgroundColor: '#4f6d7a' } : {}}
           >
             📋 Receita
           </button>
@@ -217,9 +367,10 @@ export default function Planner() {
             onClick={() => setMealMode({ ...mealMode, [mealType]: 'individual' })}
             className={`flex-1 px-3 py-2 rounded-lg text-sm font-medium transition-all ${
               currentMode === 'individual'
-                ? 'bg-blue-600 text-white'
-                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                ? 'text-white'
+                : 'bg-[#eaeaea] text-gray-700 hover:bg-[#c0d6df]'
             }`}
+            style={currentMode === 'individual' ? { backgroundColor: '#4f6d7a' } : {}}
           >
             🍽️ Itens
           </button>
@@ -239,134 +390,254 @@ export default function Planner() {
               ))}
             </select>
             {meal.recipeName && (
-              <p className="text-sm text-gray-600 bg-green-50 p-2 rounded">
+              <p className="text-sm text-gray-600 p-2 rounded" style={{ backgroundColor: '#c0d6df' }}>
                 ✓ {meal.recipeName}
               </p>
             )}
           </div>
         )}
 
-        {/* Seleção de itens individuais */}
+            {/* Seleção de itens individuais */}
         {currentMode === 'individual' && (
           <div className="space-y-3">
-            {/* Carboidratos */}
-            <div>
-              <h4 className="text-xs font-semibold text-gray-600 mb-2">Carboidratos</h4>
-              <div className="flex flex-wrap gap-2">
-                {individualItems.carbos.map(item => (
-                  <button
-                    key={item.id}
-                    onClick={() => toggleIndividualItem(mealType, item.id)}
-                    className={`px-3 py-2 rounded-lg text-sm font-medium transition-all whitespace-nowrap ${
-                      meal.items?.includes(item.id)
-                        ? 'bg-blue-600 text-white'
-                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                    }`}
-                  >
-                    {item.icon} {item.name}
-                  </button>
-                ))}
-              </div>
-            </div>
+            {/* Converter items para formato normalizado */}
+            {(() => {
+              const normalizedItems = (meal.items || []).map(item => 
+                typeof item === 'string' ? { id: item, quantity: 1 } : item
+              );
+              const selectedItemsMap = new Map(normalizedItems.map(item => [item.id, item.quantity]));
+              
+              return (
+                <>
+                  {/* Carboidratos */}
+                  <div>
+                    <h4 className="text-xs font-semibold text-gray-600 mb-2">Carboidratos</h4>
+                    <div className="flex flex-wrap gap-2">
+                      {individualItems.carbos.map(item => {
+                        const isSelected = selectedItemsMap.has(item.id);
+                        const quantity = selectedItemsMap.get(item.id) || 0;
+                        return (
+                          <div key={item.id} className="flex items-center gap-1">
+                            <button
+                              onClick={() => toggleIndividualItem(mealType, item.id, isSelected ? 0 : 1)}
+                              className={`px-3 py-2 rounded-lg text-sm font-medium transition-all whitespace-nowrap ${
+                                isSelected
+                                  ? 'text-white'
+                                  : 'bg-[#eaeaea] text-gray-700 hover:bg-[#c0d6df]'
+                              }`}
+                              style={isSelected ? { backgroundColor: '#4f6d7a' } : {}}
+                            >
+                              {item.icon} {item.name}
+                            </button>
+                            {isSelected && (
+                              <div className="flex items-center gap-1">
+                                <input
+                                  type="number"
+                                  min="1"
+                                  value={quantity}
+                                  onChange={(e) => {
+                                    const newQty = parseInt(e.target.value) || 1;
+                                    toggleIndividualItem(mealType, item.id, newQty);
+                                  }}
+                                  onClick={(e) => e.stopPropagation()}
+                                  className="w-16 px-1 py-1 border border-gray-300 rounded text-center text-sm"
+                                />
+                                <span className="text-xs text-gray-500">{item.unit || 'g'}</span>
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
 
-            {/* Proteínas */}
-            <div>
-              <h4 className="text-xs font-semibold text-gray-600 mb-2">Proteínas</h4>
-              <div className="flex flex-wrap gap-2">
-                {individualItems.proteinas.map(item => (
-                  <button
-                    key={item.id}
-                    onClick={() => toggleIndividualItem(mealType, item.id)}
-                    className={`px-3 py-2 rounded-lg text-sm font-medium transition-all whitespace-nowrap ${
-                      meal.items?.includes(item.id)
-                        ? 'bg-blue-600 text-white'
-                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                    }`}
-                  >
-                    {item.icon} {item.name}
-                  </button>
-                ))}
-              </div>
-            </div>
+                  {/* Proteínas */}
+                  <div>
+                    <h4 className="text-xs font-semibold text-gray-600 mb-2">Proteínas</h4>
+                    <div className="flex flex-wrap gap-2">
+                      {individualItems.proteinas.map(item => {
+                        const isSelected = selectedItemsMap.has(item.id);
+                        const quantity = selectedItemsMap.get(item.id) || 0;
+                        return (
+                          <div key={item.id} className="flex items-center gap-1">
+                            <button
+                              onClick={() => toggleIndividualItem(mealType, item.id, isSelected ? 0 : 1)}
+                              className={`px-3 py-2 rounded-lg text-sm font-medium transition-all whitespace-nowrap ${
+                                isSelected
+                                  ? 'text-white'
+                                  : 'bg-[#eaeaea] text-gray-700 hover:bg-[#c0d6df]'
+                              }`}
+                              style={isSelected ? { backgroundColor: '#4f6d7a' } : {}}
+                            >
+                              {item.icon} {item.name}
+                            </button>
+                            {isSelected && (
+                              <div className="flex items-center gap-1">
+                                <input
+                                  type="number"
+                                  min="1"
+                                  value={quantity}
+                                  onChange={(e) => {
+                                    const newQty = parseInt(e.target.value) || 1;
+                                    toggleIndividualItem(mealType, item.id, newQty);
+                                  }}
+                                  onClick={(e) => e.stopPropagation()}
+                                  className="w-16 px-1 py-1 border border-gray-300 rounded text-center text-sm"
+                                />
+                                <span className="text-xs text-gray-500">{item.unit || 'g'}</span>
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
 
-            {/* Saladas */}
-            <div>
-              <h4 className="text-xs font-semibold text-gray-600 mb-2">Saladas</h4>
-              <div className="flex flex-wrap gap-2">
-                {individualItems.saladas.map(item => (
-                  <button
-                    key={item.id}
-                    onClick={() => toggleIndividualItem(mealType, item.id)}
-                    className={`px-3 py-2 rounded-lg text-sm font-medium transition-all whitespace-nowrap ${
-                      meal.items?.includes(item.id)
-                        ? 'bg-blue-600 text-white'
-                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                    }`}
-                  >
-                    {item.icon} {item.name}
-                  </button>
-                ))}
-              </div>
-            </div>
+                  {/* Saladas */}
+                  <div>
+                    <h4 className="text-xs font-semibold text-gray-600 mb-2">Saladas</h4>
+                    <div className="flex flex-wrap gap-2">
+                      {individualItems.saladas.map(item => {
+                        const isSelected = selectedItemsMap.has(item.id);
+                        const quantity = selectedItemsMap.get(item.id) || 0;
+                        return (
+                          <div key={item.id} className="flex items-center gap-1">
+                            <button
+                              onClick={() => toggleIndividualItem(mealType, item.id, isSelected ? 0 : 1)}
+                              className={`px-3 py-2 rounded-lg text-sm font-medium transition-all whitespace-nowrap ${
+                                isSelected
+                                  ? 'text-white'
+                                  : 'bg-[#eaeaea] text-gray-700 hover:bg-[#c0d6df]'
+                              }`}
+                              style={isSelected ? { backgroundColor: '#4f6d7a' } : {}}
+                            >
+                              {item.icon} {item.name}
+                            </button>
+                            {isSelected && (
+                              <div className="flex items-center gap-1">
+                                <input
+                                  type="number"
+                                  min="1"
+                                  value={quantity}
+                                  onChange={(e) => {
+                                    const newQty = parseInt(e.target.value) || 1;
+                                    toggleIndividualItem(mealType, item.id, newQty);
+                                  }}
+                                  onClick={(e) => e.stopPropagation()}
+                                  className="w-16 px-1 py-1 border border-gray-300 rounded text-center text-sm"
+                                />
+                                <span className="text-xs text-gray-500">{item.unit || 'g'}</span>
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
 
-            {/* Frutas (especialmente para lanches) */}
-            {(mealType === 'lancheManha' || mealType === 'lancheTarde') && (
-              <div>
-                <h4 className="text-xs font-semibold text-gray-600 mb-2">Frutas</h4>
-                <div className="flex flex-wrap gap-2">
-                  {individualItems.frutas.map(item => (
-                    <button
-                      key={item.id}
-                      onClick={() => toggleIndividualItem(mealType, item.id)}
-                      className={`px-3 py-2 rounded-lg text-sm font-medium transition-all whitespace-nowrap ${
-                        meal.items?.includes(item.id)
-                          ? 'bg-blue-600 text-white'
-                          : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                      }`}
-                    >
-                      {item.icon} {item.name}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
+                  {/* Frutas (especialmente para lanches) */}
+                  {(mealType === 'lancheManha' || mealType === 'lancheTarde') && (
+                    <div>
+                      <h4 className="text-xs font-semibold text-gray-600 mb-2">Frutas</h4>
+                      <div className="flex flex-wrap gap-2">
+                        {individualItems.frutas.map(item => {
+                          const isSelected = selectedItemsMap.has(item.id);
+                          const quantity = selectedItemsMap.get(item.id) || 0;
+                          return (
+                            <div key={item.id} className="flex items-center gap-1">
+                              <button
+                                onClick={() => toggleIndividualItem(mealType, item.id, isSelected ? 0 : 1)}
+                                className={`px-3 py-2 rounded-lg text-sm font-medium transition-all whitespace-nowrap ${
+                                  isSelected
+                                    ? 'text-white'
+                                    : 'bg-[#eaeaea] text-gray-700 hover:bg-[#c0d6df]'
+                                }`}
+                                style={isSelected ? { backgroundColor: '#4f6d7a' } : {}}
+                              >
+                                {item.icon} {item.name}
+                              </button>
+                              {isSelected && (
+                                <input
+                                  type="number"
+                                  min="1"
+                                  value={quantity}
+                                  onChange={(e) => {
+                                    const newQty = parseInt(e.target.value) || 1;
+                                    toggleIndividualItem(mealType, item.id, newQty);
+                                  }}
+                                  onClick={(e) => e.stopPropagation()}
+                                  className="w-12 px-1 py-1 border border-gray-300 rounded text-center text-sm"
+                                />
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
 
-            {/* Outros (para pós-treino principalmente) */}
-            {mealType === 'posTreino' && (
-              <div>
-                <h4 className="text-xs font-semibold text-gray-600 mb-2">Outros</h4>
-                <div className="flex flex-wrap gap-2">
-                  {individualItems.outros.map(item => (
-                    <button
-                      key={item.id}
-                      onClick={() => toggleIndividualItem(mealType, item.id)}
-                      className={`px-3 py-2 rounded-lg text-sm font-medium transition-all whitespace-nowrap ${
-                        meal.items?.includes(item.id)
-                          ? 'bg-blue-600 text-white'
-                          : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                      }`}
-                    >
-                      {item.icon} {item.name}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
+                  {/* Outros (para pós-treino principalmente) */}
+                  {mealType === 'posTreino' && (
+                    <div>
+                      <h4 className="text-xs font-semibold text-gray-600 mb-2">Outros</h4>
+                      <div className="flex flex-wrap gap-2">
+                        {individualItems.outros.map(item => {
+                          const isSelected = selectedItemsMap.has(item.id);
+                          const quantity = selectedItemsMap.get(item.id) || 0;
+                          return (
+                            <div key={item.id} className="flex items-center gap-1">
+                              <button
+                                onClick={() => toggleIndividualItem(mealType, item.id, isSelected ? 0 : 1)}
+                                className={`px-3 py-2 rounded-lg text-sm font-medium transition-all whitespace-nowrap ${
+                                  isSelected
+                                    ? 'text-white'
+                                    : 'bg-[#eaeaea] text-gray-700 hover:bg-[#c0d6df]'
+                                }`}
+                                style={isSelected ? { backgroundColor: '#4f6d7a' } : {}}
+                              >
+                                {item.icon} {item.name}
+                              </button>
+                              {isSelected && (
+                                <input
+                                  type="number"
+                                  min="1"
+                                  value={quantity}
+                                  onChange={(e) => {
+                                    const newQty = parseInt(e.target.value) || 1;
+                                    toggleIndividualItem(mealType, item.id, newQty);
+                                  }}
+                                  onClick={(e) => e.stopPropagation()}
+                                  className="w-12 px-1 py-1 border border-gray-300 rounded text-center text-sm"
+                                />
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
 
-            {/* Mostrar itens selecionados */}
-            {meal.items && meal.items.length > 0 && (
-              <div className="mt-2 p-2 bg-blue-50 rounded">
-                <p className="text-xs font-semibold text-gray-600 mb-1">Selecionados:</p>
-                <p className="text-sm text-gray-700">
-                  {meal.items.map((itemId, idx) => {
-                    const item = [...individualItems.carbos, ...individualItems.proteinas, 
-                                  ...individualItems.saladas, ...individualItems.frutas, 
-                                  ...individualItems.outros].find(i => i.id === itemId);
-                    return item ? `${item.icon} ${item.name}${idx < meal.items.length - 1 ? ', ' : ''}` : '';
-                  }).join('')}
-                </p>
-              </div>
-            )}
+                  {/* Mostrar itens selecionados */}
+                  {normalizedItems.length > 0 && (
+                    <div className="mt-2 p-2 bg-blue-50 rounded">
+                      <p className="text-xs font-semibold text-gray-600 mb-1">Selecionados:</p>
+                      <p className="text-sm text-gray-700">
+                        {normalizedItems.map((item, idx) => {
+                          const allItems = [...individualItems.carbos, ...individualItems.proteinas, 
+                                            ...individualItems.saladas, ...individualItems.frutas, 
+                                            ...individualItems.outros];
+                          const itemData = allItems.find(i => i.id === item.id);
+                          const unit = itemData?.unit || 'g';
+                          return itemData 
+                            ? `${itemData.icon} ${itemData.name} (${item.quantity}${unit})${idx < normalizedItems.length - 1 ? ', ' : ''}` 
+                            : '';
+                        }).join('')}
+                      </p>
+                    </div>
+                  )}
+                </>
+              );
+            })()}
           </div>
         )}
       </div>
@@ -392,10 +663,10 @@ export default function Planner() {
                 onClick={() => setSelectedDate(date)}
                 className={`flex-shrink-0 px-3 py-2 rounded-lg text-sm font-medium ${
                   isSelected
-                    ? 'bg-green-600 text-white'
+                    ? 'bg-[#4f6d7a] text-white'
                     : isToday
-                    ? 'bg-green-100 text-green-700'
-                    : 'bg-gray-100 text-gray-700'
+                    ? 'bg-[#c0d6df] text-[#4f6d7a]'
+                    : 'bg-[#eaeaea] text-gray-700'
                 }`}
               >
                 <div>{dayNames[d.getDay()]}</div>

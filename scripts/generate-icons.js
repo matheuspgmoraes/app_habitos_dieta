@@ -23,3 +23,4 @@ Para gerar os ícones PNG do PWA, você pode:
 Os arquivos SVG já estão criados em public/
 `);
 
+

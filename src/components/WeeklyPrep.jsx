@@ -65,7 +65,10 @@ export default function WeeklyPrep() {
           </h2>
           <button
             onClick={() => setEditingDay(editingDay === 'sunday' ? null : 'sunday')}
-            className="px-3 py-1 bg-blue-600 text-white rounded text-sm hover:bg-blue-700"
+            className="px-3 py-1 text-white rounded text-sm"
+            style={{ backgroundColor: '#4f6d7a' }}
+            onMouseEnter={(e) => e.target.style.backgroundColor = '#dd6e42'}
+            onMouseLeave={(e) => e.target.style.backgroundColor = '#4f6d7a'}
           >
             {editingDay === 'sunday' ? 'Concluir' : 'Editar'}
           </button>
@@ -84,7 +87,10 @@ export default function WeeklyPrep() {
             />
             <button
               onClick={() => handleAddTask('sunday')}
-              className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
+              className="px-4 py-2 text-white rounded-lg"
+              style={{ backgroundColor: '#4f6d7a' }}
+              onMouseEnter={(e) => e.target.style.backgroundColor = '#dd6e42'}
+              onMouseLeave={(e) => e.target.style.backgroundColor = '#4f6d7a'}
             >
               +
             </button>
@@ -108,7 +114,10 @@ export default function WeeklyPrep() {
                   />
                   <button
                     onClick={() => handleRemoveTask('sunday', idx)}
-                    className="px-2 py-1 bg-red-600 text-white rounded text-sm hover:bg-red-700 flex-shrink-0"
+                    className="px-2 py-1 text-white rounded text-sm flex-shrink-0"
+                    style={{ backgroundColor: '#dd6e42' }}
+                    onMouseEnter={(e) => e.target.style.backgroundColor = '#c55a2e'}
+                    onMouseLeave={(e) => e.target.style.backgroundColor = '#dd6e42'}
                   >
                     ×
                   </button>
@@ -130,7 +139,10 @@ export default function WeeklyPrep() {
           </h2>
           <button
             onClick={() => setEditingDay(editingDay === 'wednesday' ? null : 'wednesday')}
-            className="px-3 py-1 bg-blue-600 text-white rounded text-sm hover:bg-blue-700"
+            className="px-3 py-1 text-white rounded text-sm"
+            style={{ backgroundColor: '#4f6d7a' }}
+            onMouseEnter={(e) => e.target.style.backgroundColor = '#dd6e42'}
+            onMouseLeave={(e) => e.target.style.backgroundColor = '#4f6d7a'}
           >
             {editingDay === 'wednesday' ? 'Concluir' : 'Editar'}
           </button>
@@ -149,7 +161,10 @@ export default function WeeklyPrep() {
             />
             <button
               onClick={() => handleAddTask('wednesday')}
-              className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
+              className="px-4 py-2 text-white rounded-lg"
+              style={{ backgroundColor: '#4f6d7a' }}
+              onMouseEnter={(e) => e.target.style.backgroundColor = '#dd6e42'}
+              onMouseLeave={(e) => e.target.style.backgroundColor = '#4f6d7a'}
             >
               +
             </button>
@@ -173,7 +188,10 @@ export default function WeeklyPrep() {
                   />
                   <button
                     onClick={() => handleRemoveTask('wednesday', idx)}
-                    className="px-2 py-1 bg-red-600 text-white rounded text-sm hover:bg-red-700 flex-shrink-0"
+                    className="px-2 py-1 text-white rounded text-sm flex-shrink-0"
+                    style={{ backgroundColor: '#dd6e42' }}
+                    onMouseEnter={(e) => e.target.style.backgroundColor = '#c55a2e'}
+                    onMouseLeave={(e) => e.target.style.backgroundColor = '#dd6e42'}
                   >
                     ×
                   </button>
@@ -187,7 +205,7 @@ export default function WeeklyPrep() {
       </div>
 
       {/* Dicas */}
-      <div className="bg-blue-50 rounded-lg shadow p-4 border border-blue-200">
+      <div className="rounded-lg shadow p-4 border" style={{ backgroundColor: '#c0d6df', borderColor: '#4f6d7a' }}>
         <h3 className="font-semibold text-blue-900 mb-2">💡 Dicas</h3>
         <ul className="space-y-1 text-sm text-blue-800">
           <li>• Congele os sanduíches individualmente para facilitar o descongelamento</li>

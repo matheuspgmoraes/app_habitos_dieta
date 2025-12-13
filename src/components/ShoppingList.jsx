@@ -90,13 +90,19 @@ export default function ShoppingList() {
           <div className="flex gap-2">
             <button
               onClick={handleAddItem}
-              className="flex-1 px-4 py-2 bg-green-600 text-white rounded-lg font-medium hover:bg-green-700"
+              className="flex-1 px-4 py-2 text-white rounded-lg font-medium"
+              style={{ backgroundColor: '#4f6d7a' }}
+              onMouseEnter={(e) => e.target.style.backgroundColor = '#dd6e42'}
+              onMouseLeave={(e) => e.target.style.backgroundColor = '#4f6d7a'}
             >
               Adicionar
             </button>
             <button
               onClick={addDefaultItems}
-              className="px-4 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 text-sm"
+              className="px-4 py-2 text-white rounded-lg font-medium text-sm"
+              style={{ backgroundColor: '#4f6d7a' }}
+              onMouseEnter={(e) => e.target.style.backgroundColor = '#dd6e42'}
+              onMouseLeave={(e) => e.target.style.backgroundColor = '#4f6d7a'}
             >
               Itens Padrão
             </button>
@@ -121,16 +127,19 @@ export default function ShoppingList() {
                     onClick={() => handleToggle(globalIndex)}
                     className={`w-full flex items-center justify-between p-3 rounded-lg border-2 transition-all text-left ${
                       item.checked
-                        ? 'bg-green-50 border-green-500 text-green-900 line-through'
+                        ? 'border-[#4f6d7a] text-[#4f6d7a] line-through'
                         : 'bg-gray-50 border-gray-300 text-gray-700'
                     }`}
+                    style={item.checked ? { backgroundColor: '#c0d6df' } : {}}
                   >
                     <span className="font-medium">{item.name}</span>
                     <div className={`w-5 h-5 rounded border-2 flex items-center justify-center flex-shrink-0 ${
                       item.checked
-                        ? 'bg-green-500 border-green-500'
+                        ? 'border-[#4f6d7a]'
                         : 'border-gray-400'
-                    }`}>
+                    }`}
+                    style={item.checked ? { backgroundColor: '#4f6d7a' } : {}}
+                    >
                       {item.checked && <span className="text-white text-xs">✓</span>}
                     </div>
                   </button>
@@ -144,7 +153,10 @@ export default function ShoppingList() {
       {hasCheckedItems && (
         <button
           onClick={clearCheckedItems}
-          className="w-full px-4 py-3 bg-red-600 text-white rounded-lg font-medium hover:bg-red-700"
+          className="w-full px-4 py-3 text-white rounded-lg font-medium"
+          style={{ backgroundColor: '#dd6e42' }}
+          onMouseEnter={(e) => e.target.style.backgroundColor = '#c55a2e'}
+          onMouseLeave={(e) => e.target.style.backgroundColor = '#dd6e42'}
         >
           Limpar Itens Marcados
         </button>

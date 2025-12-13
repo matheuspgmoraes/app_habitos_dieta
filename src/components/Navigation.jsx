@@ -1,10 +1,10 @@
 export default function Navigation({ currentPage, onNavigate }) {
   const navItems = [
-    { id: 'dashboard', label: 'Dashboard', icon: '📊' },
-    { id: 'planner', label: 'Planner', icon: '📅' },
-    { id: 'checklist', label: 'Checklist', icon: '✅' },
-    { id: 'recipes-more', label: 'Receitas & Mais', icon: '🍽️' },
-    { id: 'activities', label: 'Atividades', icon: '🏃' }
+    { id: 'dashboard', label: 'Dashboard' },
+    { id: 'planner', label: 'Planner' },
+    { id: 'checklist', label: 'Checklist' },
+    { id: 'recipes-more', label: 'Alimentação' },
+    { id: 'activities', label: 'Atividades' }
   ];
 
   return (
@@ -16,11 +16,11 @@ export default function Navigation({ currentPage, onNavigate }) {
             onClick={() => onNavigate(item.id)}
             className={`flex flex-col items-center justify-center px-3 py-2 rounded-lg transition-all ${
               currentPage === item.id
-                ? 'text-green-600 bg-green-50'
+                ? 'text-white'
                 : 'text-gray-600 hover:text-gray-900'
             }`}
+            style={currentPage === item.id ? { backgroundColor: '#4f6d7a' } : {}}
           >
-            <span className="text-xl mb-1">{item.icon}</span>
             <span className="text-xs font-medium">{item.label}</span>
           </button>
         ))}

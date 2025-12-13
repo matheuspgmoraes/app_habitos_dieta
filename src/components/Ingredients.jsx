@@ -3,46 +3,46 @@ import { useStorage } from '../hooks/useStorage';
 
 const DEFAULT_INGREDIENTS = {
   carbos: [
-    { id: 'arroz', name: 'Arroz', icon: '🍚' },
-    { id: 'feijao', name: 'Feijão', icon: '🫘' },
-    { id: 'cuscuz', name: 'Cuscuz', icon: '🌾' },
-    { id: 'pao-integral', name: 'Pão Integral', icon: '🍞' },
-    { id: 'batata', name: 'Batata', icon: '🥔' },
-    { id: 'batata-doce', name: 'Batata Doce', icon: '🍠' },
-    { id: 'macarrao', name: 'Macarrão', icon: '🍝' }
+    { id: 'arroz', name: 'Arroz', icon: '🍚', unit: 'g' },
+    { id: 'feijao', name: 'Feijão', icon: '🫘', unit: 'g' },
+    { id: 'cuscuz', name: 'Cuscuz', icon: '🌾', unit: 'g' },
+    { id: 'pao-integral', name: 'Pão Integral', icon: '🍞', unit: 'g' },
+    { id: 'batata', name: 'Batata', icon: '🥔', unit: 'g' },
+    { id: 'batata-doce', name: 'Batata Doce', icon: '🍠', unit: 'g' },
+    { id: 'macarrao', name: 'Macarrão', icon: '🍝', unit: 'g' }
   ],
   proteinas: [
-    { id: 'frango-cubos', name: 'Frango em Cubos', icon: '🍗' },
-    { id: 'frango-desfiado', name: 'Frango Desfiado', icon: '🍗' },
-    { id: 'frango-empanado', name: 'Frango Empanado', icon: '🍗' },
-    { id: 'sobrecoxa', name: 'Sobrecoxa', icon: '🍗' },
-    { id: 'carne-moida', name: 'Carne Moída', icon: '🥩' },
-    { id: 'ovos', name: 'Ovos', icon: '🥚' },
-    { id: 'peixe', name: 'Peixe', icon: '🐟' },
-    { id: 'atum', name: 'Atum', icon: '🐟' }
+    { id: 'frango-cubos', name: 'Frango em Cubos', icon: '🍗', unit: 'g' },
+    { id: 'frango-desfiado', name: 'Frango Desfiado', icon: '🍗', unit: 'g' },
+    { id: 'frango-empanado', name: 'Frango Empanado', icon: '🍗', unit: 'g' },
+    { id: 'sobrecoxa', name: 'Sobrecoxa', icon: '🍗', unit: 'g' },
+    { id: 'carne-moida', name: 'Carne Moída', icon: '🥩', unit: 'g' },
+    { id: 'ovos', name: 'Ovos', icon: '🥚', unit: 'un' },
+    { id: 'peixe', name: 'Peixe', icon: '🐟', unit: 'g' },
+    { id: 'atum', name: 'Atum', icon: '🐟', unit: 'g' }
   ],
   saladas: [
-    { id: 'alface', name: 'Alface', icon: '🥬' },
-    { id: 'tomate', name: 'Tomate', icon: '🍅' },
-    { id: 'cebola', name: 'Cebola', icon: '🧅' },
-    { id: 'cenoura', name: 'Cenoura', icon: '🥕' },
-    { id: 'beterraba', name: 'Beterraba', icon: '🍠' },
-    { id: 'repolho', name: 'Repolho', icon: '🥬' },
-    { id: 'pepino', name: 'Pepino', icon: '🥒' }
+    { id: 'alface', name: 'Alface', icon: '🥬', unit: 'porção' },
+    { id: 'tomate', name: 'Tomate', icon: '🍅', unit: 'porção' },
+    { id: 'cebola', name: 'Cebola', icon: '🧅', unit: 'porção' },
+    { id: 'cenoura', name: 'Cenoura', icon: '🥕', unit: 'porção' },
+    { id: 'beterraba', name: 'Beterraba', icon: '🍠', unit: 'porção' },
+    { id: 'repolho', name: 'Repolho', icon: '🥬', unit: 'porção' },
+    { id: 'pepino', name: 'Pepino', icon: '🥒', unit: 'porção' }
   ],
   frutas: [
-    { id: 'maca', name: 'Maçã', icon: '🍎' },
-    { id: 'uva', name: 'Uva', icon: '🍇' },
-    { id: 'morango', name: 'Morango', icon: '🍓' },
-    { id: 'manga', name: 'Manga', icon: '🥭' },
-    { id: 'mamao', name: 'Mamão', icon: '🍈' },
-    { id: 'banana', name: 'Banana', icon: '🍌' }
+    { id: 'maca', name: 'Maçã', icon: '🍎', unit: 'un' },
+    { id: 'uva', name: 'Uva', icon: '🍇', unit: 'un' },
+    { id: 'morango', name: 'Morango', icon: '🍓', unit: 'un' },
+    { id: 'manga', name: 'Manga', icon: '🥭', unit: 'un' },
+    { id: 'mamao', name: 'Mamão', icon: '🍈', unit: 'un' },
+    { id: 'banana', name: 'Banana', icon: '🍌', unit: 'un' }
   ],
   adicionais: [
-    { id: 'castanhas', name: 'Castanhas', icon: '🥜' },
-    { id: 'nozes', name: 'Nozes', icon: '🌰' },
-    { id: 'chocolate', name: 'Chocolate 70%', icon: '🍫' },
-    { id: 'aveia', name: 'Aveia', icon: '🌾' }
+    { id: 'castanhas', name: 'Castanhas', icon: '🥜', unit: 'g' },
+    { id: 'nozes', name: 'Nozes', icon: '🌰', unit: 'g' },
+    { id: 'chocolate', name: 'Chocolate 70%', icon: '🍫', unit: 'g' },
+    { id: 'aveia', name: 'Aveia', icon: '🌾', unit: 'g' }
   ]
 };
 
@@ -56,8 +56,9 @@ const GROUP_LABELS = {
 
 export default function Ingredients() {
   const { data, updateData } = useStorage();
-  const [newIngredient, setNewIngredient] = useState({ name: '', icon: '📝', group: 'carbos' });
+  const [newIngredient, setNewIngredient] = useState({ name: '', icon: '📝', group: 'carbos', unit: 'g' });
   const [editingId, setEditingId] = useState(null);
+  const [editingData, setEditingData] = useState({});
 
   if (!data) return <div className="p-4">Carregando...</div>;
 
@@ -73,12 +74,13 @@ export default function Ingredients() {
     const ingredient = {
       id: `ingredient-${Date.now()}`,
       name: newIngredient.name.trim(),
-      icon: newIngredient.icon || '📝'
+      icon: newIngredient.icon || '📝',
+      unit: newIngredient.unit || 'g'
     };
 
     updated.ingredients[newIngredient.group].push(ingredient);
     updateData(updated);
-    setNewIngredient({ name: '', icon: '📝', group: 'carbos' });
+    setNewIngredient({ name: '', icon: '📝', group: 'carbos', unit: 'g' });
   };
 
   const handleDeleteIngredient = (group, index) => {
@@ -90,9 +92,36 @@ export default function Ingredients() {
   };
 
   const handleEditIngredient = (group, index, newData) => {
+    // Atualizar dados de edição temporários
+    const editId = `${group}-${index}`;
+    setEditingData(prev => ({
+      ...prev,
+      [editId]: { ...prev[editId], ...newData }
+    }));
+  };
+
+  const handleSaveIngredient = (group, index) => {
+    const editId = `${group}-${index}`;
+    const editedData = editingData[editId];
+    if (!editedData) {
+      setEditingId(null);
+      return;
+    }
+
     const updated = { ...data };
-    updated.ingredients[group][index] = { ...updated.ingredients[group][index], ...newData };
+    if (!updated.ingredients) {
+      updated.ingredients = { ...DEFAULT_INGREDIENTS };
+    }
+    // Criar uma cópia do array para garantir que o React detecte a mudança
+    const groupArray = [...(updated.ingredients[group] || [])];
+    groupArray[index] = { ...groupArray[index], ...editedData };
+    updated.ingredients[group] = groupArray;
     updateData(updated);
+    
+    // Limpar dados de edição e fechar modo de edição
+    const newEditingData = { ...editingData };
+    delete newEditingData[editId];
+    setEditingData(newEditingData);
     setEditingId(null);
   };
 
@@ -108,7 +137,10 @@ export default function Ingredients() {
         <h1 className="text-2xl font-bold text-gray-900">Ingredientes</h1>
         <button
           onClick={handleAddDefaults}
-          className="px-3 py-1 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700"
+          className="px-3 py-1 text-white rounded-lg text-sm font-medium"
+          style={{ backgroundColor: '#4f6d7a' }}
+          onMouseEnter={(e) => e.target.style.backgroundColor = '#dd6e42'}
+          onMouseLeave={(e) => e.target.style.backgroundColor = '#4f6d7a'}
         >
           Restaurar Padrão
         </button>
@@ -144,9 +176,21 @@ export default function Ingredients() {
                 <option key={key} value={key}>{label}</option>
               ))}
             </select>
+            <select
+              value={newIngredient.unit}
+              onChange={(e) => setNewIngredient({ ...newIngredient, unit: e.target.value })}
+              className="px-2 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 text-sm flex-shrink-0"
+            >
+              <option value="g">Gramas (g)</option>
+              <option value="un">Unidade (un)</option>
+              <option value="porção">Porção</option>
+            </select>
             <button
               onClick={handleAddIngredient}
-              className="px-4 py-2 bg-green-600 text-white rounded-lg font-medium hover:bg-green-700 flex-shrink-0"
+              className="px-4 py-2 text-white rounded-lg font-medium flex-shrink-0"
+              style={{ backgroundColor: '#4f6d7a' }}
+              onMouseEnter={(e) => e.target.style.backgroundColor = '#dd6e42'}
+              onMouseLeave={(e) => e.target.style.backgroundColor = '#4f6d7a'}
             >
               +
             </button>
@@ -166,6 +210,10 @@ export default function Ingredients() {
               {groupIngredients.map((ingredient, idx) => {
                 const editId = `${groupKey}-${idx}`;
                 const isEditing = editingId === editId;
+                const currentEditing = editingData[editId] || {};
+                const displayIngredient = isEditing 
+                  ? { ...ingredient, ...currentEditing }
+                  : ingredient;
 
                 return (
                   <div
@@ -176,20 +224,32 @@ export default function Ingredients() {
                       <>
                         <input
                           type="text"
-                          value={ingredient.icon}
+                          value={displayIngredient.icon || ''}
                           onChange={(e) => handleEditIngredient(groupKey, idx, { icon: e.target.value })}
                           className="w-12 text-center text-lg border rounded flex-shrink-0"
                           maxLength="2"
                         />
                         <input
                           type="text"
-                          value={ingredient.name}
+                          value={displayIngredient.name || ''}
                           onChange={(e) => handleEditIngredient(groupKey, idx, { name: e.target.value })}
                           className="flex-1 min-w-0 px-2 py-1 border border-gray-300 rounded text-sm"
                         />
+                        <select
+                          value={displayIngredient.unit || 'g'}
+                          onChange={(e) => handleEditIngredient(groupKey, idx, { unit: e.target.value })}
+                          className="px-2 py-1 border border-gray-300 rounded text-xs flex-shrink-0"
+                        >
+                          <option value="g">g</option>
+                          <option value="un">un</option>
+                          <option value="porção">porção</option>
+                        </select>
                         <button
-                          onClick={() => setEditingId(null)}
-                          className="px-2 py-1 bg-green-600 text-white rounded text-xs flex-shrink-0"
+                          onClick={() => handleSaveIngredient(groupKey, idx)}
+                          className="px-2 py-1 text-white rounded text-xs flex-shrink-0"
+                          style={{ backgroundColor: '#4f6d7a' }}
+                          onMouseEnter={(e) => e.target.style.backgroundColor = '#dd6e42'}
+                          onMouseLeave={(e) => e.target.style.backgroundColor = '#4f6d7a'}
                         >
                           ✓
                         </button>
@@ -198,15 +258,28 @@ export default function Ingredients() {
                       <>
                         <span className="text-xl flex-shrink-0">{ingredient.icon}</span>
                         <span className="flex-1 text-sm font-medium break-words min-w-0">{ingredient.name}</span>
+                        <span className="text-xs text-gray-500 flex-shrink-0">({ingredient.unit || 'g'})</span>
                         <button
-                          onClick={() => setEditingId(editId)}
-                          className="px-2 py-1 bg-blue-600 text-white rounded text-xs hover:bg-blue-700 flex-shrink-0 whitespace-nowrap"
+                          onClick={() => {
+                            setEditingData(prev => ({
+                              ...prev,
+                              [editId]: { ...ingredient }
+                            }));
+                            setEditingId(editId);
+                          }}
+                          className="px-2 py-1 text-white rounded text-xs flex-shrink-0 whitespace-nowrap"
+                          style={{ backgroundColor: '#4f6d7a' }}
+                          onMouseEnter={(e) => e.target.style.backgroundColor = '#dd6e42'}
+                          onMouseLeave={(e) => e.target.style.backgroundColor = '#4f6d7a'}
                         >
                           Editar
                         </button>
                         <button
                           onClick={() => handleDeleteIngredient(groupKey, idx)}
-                          className="px-2 py-1 bg-red-600 text-white rounded text-xs hover:bg-red-700 flex-shrink-0"
+                          className="px-2 py-1 text-white rounded text-xs flex-shrink-0"
+                          style={{ backgroundColor: '#dd6e42' }}
+                          onMouseEnter={(e) => e.target.style.backgroundColor = '#c55a2e'}
+                          onMouseLeave={(e) => e.target.style.backgroundColor = '#dd6e42'}
                         >
                           ×
                         </button>

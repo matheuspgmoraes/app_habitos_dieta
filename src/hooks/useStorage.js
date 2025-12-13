@@ -47,7 +47,29 @@ export function useStorage() {
 
   const updatePlanner = (date, meal, mealData) => {
     const updated = { ...data };
-    const dayIndex = updated.planner.findIndex(d => d.date === date);
+    let dayIndex = updated.planner.findIndex(d => d.date === date);
+    
+    // Se o dia não existe, criar
+    if (dayIndex === -1) {
+      const dateObj = new Date(date);
+      const dayOfWeek = dateObj.getDay();
+      const newDay = {
+        date: date,
+        meals: {
+          cafe: { time: '07:00', recipeId: null, recipeName: null, items: [] },
+          lancheManha: { time: '09:00', recipeId: null, recipeName: null, items: [] },
+          almoco: { time: '12:30', recipeId: null, recipeName: null, items: [] },
+          lancheTarde: { time: '15:30', recipeId: null, recipeName: null, items: [] },
+          jantar: { time: dayOfWeek === 1 || dayOfWeek === 3 ? '18:00' : '18:30', recipeId: null, recipeName: null, items: [] },
+          posTreino: { time: (dayOfWeek === 1 || dayOfWeek === 3) ? '22:00' : null, recipeId: null, recipeName: null, items: [] }
+        },
+        activities: []
+      };
+      updated.planner.push(newDay);
+      updated.planner.sort((a, b) => new Date(a.date) - new Date(b.date));
+      dayIndex = updated.planner.findIndex(d => d.date === date);
+    }
+    
     if (dayIndex !== -1) {
       updated.planner[dayIndex].meals[meal] = mealData;
       updateData(updated);

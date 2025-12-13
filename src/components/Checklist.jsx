@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useStorage } from '../hooks/useStorage';
 import { getWeekStart } from '../utils/storage';
 import { calculateDayProgress, calculateWeekProgress } from '../utils/calculations';
+import DraggableProgressBar from './DraggableProgressBar';
 
 export default function Checklist() {
   const { data, updateChecklist, updateData } = useStorage();
@@ -9,14 +10,32 @@ export default function Checklist() {
   const [showHistory, setShowHistory] = useState(false);
   const [activeTab, setActiveTab] = useState('alimentacao'); // 'alimentacao' ou 'habitos'
   const [showHabitsEditor, setShowHabitsEditor] = useState(false);
+  const [showFoodEditor, setShowFoodEditor] = useState(false);
+  const [actionHistory, setActionHistory] = useState([]); // Histórico de ações para desfazer
   const [newHabit, setNewHabit] = useState({ 
     name: '', 
     icon: '📝',
     type: 'boolean', // 'boolean', 'quantity', 'timesPerDay', 'timesPerWeek'
     target: 1
   });
+  const [newFoodItem, setNewFoodItem] = useState({
+    label: '',
+    icon: '🍽️',
+    max: 1
+  });
 
   if (!data) return <div className="p-4">Carregando...</div>;
+
+  // Checklist items customizáveis (carregar do storage ou usar padrão)
+  const customChecklistItems = data.customChecklistItems || [
+    { key: 'cafe', label: 'Café da manhã', icon: '☕', max: 1 },
+    { key: 'lancheManha', label: 'Lanche da manhã', icon: '🍎', max: 1 },
+    { key: 'almoco', label: 'Almoço', icon: '🍽️', max: 1 },
+    { key: 'lancheTarde', label: 'Lanche da tarde', icon: '🥗', max: 1 },
+    { key: 'jantar', label: 'Jantar', icon: '🍲', max: 1 },
+    { key: 'posTreino', label: 'Pós-treino', icon: '🥤', max: 1 },
+    { key: 'creatina', label: 'Creatina', icon: '💊', max: 1 }
+  ];
 
   const weekStart = getWeekStart(new Date());
   const week = [];
@@ -27,7 +46,7 @@ export default function Checklist() {
   }
 
   const selectedDay = data.checklist.find(d => d.date === selectedDate);
-  const dayProgress = selectedDay ? calculateDayProgress(selectedDay.items) : 0;
+  const dayProgress = selectedDay ? calculateDayProgress(selectedDay.items, customChecklistItems) : 0;
   const weekProgress = calculateWeekProgress(data.checklist);
 
   // Hábitos diários (rotina)
@@ -49,22 +68,42 @@ export default function Checklist() {
     return true;
   });
 
-  const checklistItems = [
-    { key: 'cafe', label: 'Café da manhã', icon: '☕' },
-    { key: 'lancheManha', label: 'Lanche da manhã', icon: '🍎' },
-    { key: 'almoco', label: 'Almoço', icon: '🍽️' },
-    { key: 'lancheTarde', label: 'Lanche da tarde', icon: '🥗' },
-    { key: 'jantar', label: 'Jantar', icon: '🍲' },
-    { key: 'posTreino', label: 'Pós-treino', icon: '🥤' },
-    { key: 'creatina', label: 'Creatina', icon: '💊' }
-  ];
-
-  const handleToggle = (item) => {
-    updateChecklist(selectedDate, item, !selectedDay.items[item]);
+  const handleProgressChange = (itemKey, value) => {
+    const oldValue = selectedDay?.items[itemKey] || 0;
+    // Salvar no histórico antes de atualizar
+    setActionHistory(prev => [...prev, {
+      type: 'item',
+      date: selectedDate,
+      key: itemKey,
+      oldValue,
+      newValue: value,
+      timestamp: Date.now()
+    }]);
+    updateChecklist(selectedDate, itemKey, value);
   };
 
   const handleWaterChange = (value) => {
+    const oldValue = selectedDay?.items?.agua || 0;
+    // Salvar no histórico antes de atualizar
+    setActionHistory(prev => [...prev, {
+      type: 'water',
+      date: selectedDate,
+      oldValue,
+      newValue: parseFloat(value),
+      timestamp: Date.now()
+    }]);
     updateChecklist(selectedDate, 'agua', parseFloat(value));
+  };
+
+  const handleUndo = () => {
+    if (actionHistory.length === 0) return;
+    const lastAction = actionHistory[actionHistory.length - 1];
+    if (lastAction.type === 'item') {
+      updateChecklist(lastAction.date, lastAction.key, lastAction.oldValue);
+    } else if (lastAction.type === 'water') {
+      updateChecklist(lastAction.date, 'agua', lastAction.oldValue);
+    }
+    setActionHistory(prev => prev.slice(0, -1));
   };
 
   const handleHabitChange = (habitId, value) => {
@@ -137,9 +176,10 @@ export default function Checklist() {
                     <span>Progresso Semanal</span>
                     <span className="font-bold">{week.weeklyPercentage}%</span>
                   </div>
-                  <div className="w-full bg-gray-200 rounded-full h-2">
+                  <div className="w-full rounded-full h-2" style={{ backgroundColor: '#eaeaea' }}>
                     <div
-                      className="bg-blue-600 h-2 rounded-full"
+                      className="h-2 rounded-full"
+                      style={{ backgroundColor: '#4f6d7a' }}
                       style={{ width: `${week.weeklyPercentage}%` }}
                     ></div>
                   </div>
@@ -168,24 +208,37 @@ export default function Checklist() {
     <div className="p-4 space-y-4 pb-20">
       <div className="flex justify-between items-center">
         <h1 className="text-2xl font-bold text-gray-900">Checklist</h1>
-        <button
-          onClick={() => setShowHistory(true)}
-          className="px-3 py-1 bg-gray-200 rounded-lg text-sm font-medium"
-        >
-          Histórico
-        </button>
+        <div className="flex gap-2">
+          {actionHistory.length > 0 && (
+            <button
+              onClick={handleUndo}
+              className="px-3 py-1 text-white rounded-lg text-sm font-medium"
+              style={{ backgroundColor: '#4f6d7a' }}
+              onMouseEnter={(e) => e.target.style.backgroundColor = '#dd6e42'}
+              onMouseLeave={(e) => e.target.style.backgroundColor = '#4f6d7a'}
+            >
+              ↶ Desfazer
+            </button>
+          )}
+          <button
+            onClick={() => setShowHistory(true)}
+            className="px-3 py-1 bg-[#eaeaea] rounded-lg text-sm font-medium"
+          >
+            Histórico
+          </button>
+        </div>
       </div>
 
       {/* Progresso da semana */}
       <div className="bg-white rounded-lg shadow p-4">
         <div className="flex justify-between items-center mb-2">
           <span className="text-sm font-medium">Progresso da Semana</span>
-          <span className="text-lg font-bold text-blue-600">{weekProgress}%</span>
+          <span className="text-lg font-bold" style={{ color: '#4f6d7a' }}>{weekProgress}%</span>
         </div>
-        <div className="w-full bg-gray-200 rounded-full h-3">
+        <div className="w-full rounded-full h-3" style={{ backgroundColor: '#eaeaea' }}>
           <div
-            className="bg-blue-600 h-3 rounded-full transition-all"
-            style={{ width: `${weekProgress}%` }}
+            className="h-3 rounded-full transition-all"
+            style={{ width: `${weekProgress}%`, backgroundColor: '#4f6d7a' }}
           />
         </div>
       </div>
@@ -199,7 +252,7 @@ export default function Checklist() {
             const isSelected = date === selectedDate;
             const isToday = date === new Date().toISOString().split('T')[0];
             const dayData = data.checklist.find(c => c.date === date);
-            const progress = dayData ? calculateDayProgress(dayData.items) : 0;
+            const progress = dayData ? calculateDayProgress(dayData.items, customChecklistItems) : 0;
             
             return (
               <button
@@ -207,10 +260,10 @@ export default function Checklist() {
                 onClick={() => setSelectedDate(date)}
                 className={`flex-shrink-0 px-3 py-2 rounded-lg text-sm font-medium ${
                   isSelected
-                    ? 'bg-green-600 text-white'
+                    ? 'bg-[#4f6d7a] text-white'
                     : isToday
-                    ? 'bg-green-100 text-green-700'
-                    : 'bg-gray-100 text-gray-700'
+                    ? 'bg-[#c0d6df] text-[#4f6d7a]'
+                    : 'bg-[#eaeaea] text-gray-700'
                 }`}
               >
                 <div>{dayNames[d.getDay()]}</div>
@@ -227,20 +280,20 @@ export default function Checklist() {
         <div className="flex border-b">
           <button
             onClick={() => setActiveTab('alimentacao')}
-            className={`flex-1 px-4 py-3 text-center font-medium transition-all ${
+            className={`flex-1 px-4 py-3 text-center font-medium transition-all border-b-2 ${
               activeTab === 'alimentacao'
-                ? 'bg-green-50 text-green-700 border-b-2 border-green-600'
-                : 'text-gray-600 hover:bg-gray-50'
+                ? 'bg-[#c0d6df] text-[#4f6d7a] border-[#dd6e42]'
+                : 'text-gray-600 border-transparent hover:bg-[#eaeaea]'
             }`}
           >
             🍽️ Alimentação
           </button>
           <button
             onClick={() => setActiveTab('habitos')}
-            className={`flex-1 px-4 py-3 text-center font-medium transition-all ${
+            className={`flex-1 px-4 py-3 text-center font-medium transition-all border-b-2 ${
               activeTab === 'habitos'
-                ? 'bg-purple-50 text-purple-700 border-b-2 border-purple-600'
-                : 'text-gray-600 hover:bg-gray-50'
+                ? 'bg-[#c0d6df] text-[#4f6d7a] border-[#dd6e42]'
+                : 'text-gray-600 border-transparent hover:bg-[#eaeaea]'
             }`}
           >
             ✨ Hábitos
@@ -255,69 +308,143 @@ export default function Checklist() {
                 <h2 className="text-lg font-semibold">
                   {new Date(selectedDate).toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' })}
                 </h2>
-                <span className="text-2xl font-bold text-green-600">{dayProgress}%</span>
+                <div className="flex items-center gap-2">
+                  <span className="text-2xl font-bold" style={{ color: '#4f6d7a' }}>{dayProgress}%</span>
+                  <button
+                    onClick={() => setShowFoodEditor(!showFoodEditor)}
+                    className="px-3 py-1 text-white rounded-lg text-sm font-medium"
+                    style={{ backgroundColor: '#4f6d7a' }}
+                    onMouseEnter={(e) => e.target.style.backgroundColor = '#dd6e42'}
+                    onMouseLeave={(e) => e.target.style.backgroundColor = '#4f6d7a'}
+                  >
+                    {showFoodEditor ? 'Fechar' : 'Editar'}
+                  </button>
+                </div>
               </div>
-              <div className="w-full bg-gray-200 rounded-full h-3 mb-4">
+              <div className="w-full rounded-full h-3 mb-4" style={{ backgroundColor: '#eaeaea' }}>
                 <div
-                  className="bg-green-600 h-3 rounded-full transition-all"
-                  style={{ width: dayProgress + '%' }}
+                  className="h-3 rounded-full transition-all"
+                  style={{ width: dayProgress + '%', backgroundColor: '#4f6d7a' }}
                 ></div>
               </div>
 
-              <div className="space-y-3">
-                {checklistItems.map((item) => {
-                  const checked = selectedDay?.items[item.key] || false;
+              <div className="space-y-4">
+                {/* Editor de itens de alimentação */}
+                {showFoodEditor && (
+                  <div className="bg-[#eaeaea] rounded-lg p-4 mb-4 border border-[#c0d6df]">
+                    <h3 className="font-semibold mb-3">Gerenciar Itens de Alimentação</h3>
+                    <div className="space-y-3">
+                      {/* Adicionar novo item */}
+                      <div className="bg-white rounded p-3">
+                        <h4 className="text-sm font-medium mb-2">Adicionar Item</h4>
+                        <div className="flex gap-2 flex-wrap">
+                          <input
+                            type="text"
+                            value={newFoodItem.icon}
+                            onChange={(e) => setNewFoodItem({ ...newFoodItem, icon: e.target.value })}
+                            placeholder="Emoji"
+                            className="w-16 px-2 py-2 border border-gray-300 rounded-lg text-center text-xl"
+                            maxLength="2"
+                          />
+                          <input
+                            type="text"
+                            value={newFoodItem.label}
+                            onChange={(e) => setNewFoodItem({ ...newFoodItem, label: e.target.value })}
+                            placeholder="Nome do item"
+                            className="flex-1 min-w-0 px-3 py-2 border border-gray-300 rounded-lg"
+                          />
+                          <input
+                            type="number"
+                            value={newFoodItem.max}
+                            onChange={(e) => setNewFoodItem({ ...newFoodItem, max: parseInt(e.target.value) || 1 })}
+                            placeholder="Max"
+                            min="1"
+                            className="w-20 px-3 py-2 border border-gray-300 rounded-lg"
+                          />
+                          <button
+                            onClick={() => {
+                              if (!newFoodItem.label.trim()) return;
+                              const updated = { ...data };
+                              const newItem = {
+                                key: `food-${Date.now()}`,
+                                label: newFoodItem.label.trim(),
+                                icon: newFoodItem.icon || '🍽️',
+                                max: newFoodItem.max || 1
+                              };
+                              updated.customChecklistItems = [...(updated.customChecklistItems || []), newItem];
+                              updateData(updated);
+                              setNewFoodItem({ label: '', icon: '🍽️', max: 1 });
+                            }}
+                            className="px-4 py-2 text-white rounded-lg font-medium"
+                            style={{ backgroundColor: '#4f6d7a' }}
+                            onMouseEnter={(e) => e.target.style.backgroundColor = '#dd6e42'}
+                            onMouseLeave={(e) => e.target.style.backgroundColor = '#4f6d7a'}
+                          >
+                            +
+                          </button>
+                        </div>
+                      </div>
+                      {/* Lista de itens existentes */}
+                      <div className="space-y-2">
+                        {customChecklistItems.map((item) => (
+                          <div key={item.key} className="flex items-center justify-between bg-white rounded p-2">
+                            <div className="flex items-center gap-2">
+                              <span className="text-xl">{item.icon}</span>
+                              <span className="font-medium">{item.label}</span>
+                              <span className="text-xs text-gray-500">(max: {item.max})</span>
+                            </div>
+                            <button
+                              onClick={() => {
+                                if (!confirm('Tem certeza que deseja remover este item?')) return;
+                                const updated = { ...data };
+                                updated.customChecklistItems = updated.customChecklistItems.filter(i => i.key !== item.key);
+                                // Limpar valores deste item em todos os dias
+                                updated.checklist.forEach(day => {
+                                  if (day.items && day.items[item.key]) {
+                                    delete day.items[item.key];
+                                  }
+                                });
+                                updateData(updated);
+                              }}
+                              className="px-2 py-1 bg-[#dd6e42] text-white rounded text-xs hover:bg-red-700"
+                            >
+                              ×
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {customChecklistItems.map((item) => {
+                  const value = selectedDay?.items[item.key] || 0;
                   return (
-                    <button
+                    <DraggableProgressBar
                       key={item.key}
-                      onClick={() => handleToggle(item.key)}
-                      className={`w-full flex items-center justify-between p-3 rounded-lg border-2 transition-all ${
-                        checked
-                          ? 'bg-green-50 border-green-500 text-green-900'
-                          : 'bg-gray-50 border-gray-300 text-gray-700'
-                      }`}
-                    >
-                      <div className="flex items-center gap-3">
-                        <span className="text-2xl">{item.icon}</span>
-                        <span className="font-medium">{item.label}</span>
-                      </div>
-                      <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center ${
-                        checked
-                          ? 'bg-green-500 border-green-500'
-                          : 'border-gray-400'
-                      }`}>
-                        {checked && <span className="text-white text-sm">✓</span>}
-                      </div>
-                    </button>
+                      value={value}
+                      max={item.max || 1}
+                      onChange={(newValue) => handleProgressChange(item.key, newValue)}
+                      label={item.label}
+                      icon={item.icon}
+                      itemKey={item.key}
+                    />
                   );
                 })}
 
-                {/* Água com slider */}
-                <div className="p-3 rounded-lg border-2 border-gray-300 bg-gray-50">
-                  <div className="flex items-center justify-between mb-3">
-                    <div className="flex items-center gap-3">
-                      <span className="text-2xl">💧</span>
-                      <span className="font-medium">Água</span>
-                    </div>
-                    <span className="text-lg font-bold text-blue-600">{waterAmount.toFixed(1)}L</span>
-                  </div>
-                  <input
-                    type="range"
-                    min="0"
-                    max="3"
-                    step="0.1"
-                    value={waterAmount}
-                    onChange={(e) => handleWaterChange(e.target.value)}
-                    className="w-full h-3 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-blue-600"
-                    style={{
-                      background: `linear-gradient(to right, #3b82f6 0%, #3b82f6 ${(waterAmount / 3) * 100}%, #e5e7eb ${(waterAmount / 3) * 100}%, #e5e7eb 100%)`
-                    }}
-                  />
-                  <div className="flex justify-between text-xs text-gray-500 mt-1">
-                    <span>0L</span>
-                    <span>1.5L</span>
-                    <span>3L</span>
-                  </div>
+                {/* Água com barra arrastável */}
+                <DraggableProgressBar
+                  value={waterAmount * 1000} // Converter para ml (0-3000ml = 0-3L)
+                  max={3000}
+                  onChange={(newValue) => handleWaterChange(newValue / 1000)}
+                  label="Água"
+                  icon="💧"
+                  itemKey="agua"
+                />
+                <div className="flex justify-between text-xs text-gray-500 mt-1">
+                  <span>0ml</span>
+                  <span>1500ml</span>
+                  <span>3000ml</span>
                 </div>
               </div>
             </div>
@@ -332,7 +459,10 @@ export default function Checklist() {
                 </h2>
                 <button
                   onClick={() => setShowHabitsEditor(!showHabitsEditor)}
-                  className="px-3 py-1 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700"
+                  className="px-3 py-1 text-white rounded-lg text-sm font-medium"
+                  style={{ backgroundColor: '#4f6d7a' }}
+                  onMouseEnter={(e) => e.target.style.backgroundColor = '#dd6e42'}
+                  onMouseLeave={(e) => e.target.style.backgroundColor = '#4f6d7a'}
                 >
                   {showHabitsEditor ? 'Fechar' : '+ Novo'}
                 </button>
@@ -382,7 +512,10 @@ export default function Checklist() {
                     )}
                     <button
                       onClick={handleAddHabit}
-                      className="w-full px-4 py-2 bg-green-600 text-white rounded-lg font-medium hover:bg-green-700"
+                      className="w-full px-4 py-2 text-white rounded-lg font-medium"
+                      style={{ backgroundColor: '#4f6d7a' }}
+                      onMouseEnter={(e) => e.target.style.backgroundColor = '#dd6e42'}
+                      onMouseLeave={(e) => e.target.style.backgroundColor = '#4f6d7a'}
                     >
                       Adicionar
                     </button>
@@ -408,8 +541,8 @@ export default function Checklist() {
                         key={habit.id}
                         className={`p-3 rounded-lg border-2 ${
                           isComplete
-                            ? 'bg-purple-50 border-purple-500'
-                            : 'bg-gray-50 border-gray-300'
+                            ? 'bg-[#c0d6df] border-[#4f6d7a]'
+                            : 'bg-[#eaeaea] border-gray-300'
                         }`}
                       >
                         <div className="flex items-center justify-between mb-2">
@@ -431,9 +564,10 @@ export default function Checklist() {
                             onClick={() => handleHabitChange(habit.id, !currentValue)}
                             className={`w-full px-3 py-2 rounded-lg font-medium ${
                               currentValue
-                                ? 'bg-purple-600 text-white'
-                                : 'bg-gray-200 text-gray-700'
+                                ? 'text-white'
+                                : 'bg-[#eaeaea] text-gray-700'
                             }`}
+                            style={currentValue ? { backgroundColor: '#4f6d7a' } : {}}
                           >
                             {currentValue ? '✓ Feito' : 'Marcar como feito'}
                           </button>
@@ -515,7 +649,10 @@ export default function Checklist() {
                             </div>
                             <button
                               onClick={() => handleHabitChange(habit.id, currentValue + 1)}
-                              className="w-full px-3 py-2 bg-purple-600 text-white rounded-lg font-medium hover:bg-purple-700"
+                              className="w-full px-3 py-2 text-white rounded-lg font-medium"
+                              style={{ backgroundColor: '#4f6d7a' }}
+                              onMouseEnter={(e) => e.target.style.backgroundColor = '#dd6e42'}
+                              onMouseLeave={(e) => e.target.style.backgroundColor = '#4f6d7a'}
                             >
                               +1 vez esta semana
                             </button>

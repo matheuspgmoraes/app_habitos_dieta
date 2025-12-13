@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { useStorage } from '../hooks/useStorage';
-import { getCurrentDayData, calculateWeekProgress, calculateMonthProgress, calculateYearProgress, getWorkoutForToday, getWorkoutTime } from '../utils/calculations';
+import { getCurrentDayData, calculateWeekProgress, calculateMonthProgress, calculateYearProgress, calculateDayProgressWithHabits } from '../utils/calculations';
 import Calendar from './Calendar';
+import ProgressCircle from './ProgressCircle';
 
 export default function Dashboard() {
   const { data, loading } = useStorage();
@@ -57,70 +58,49 @@ export default function Dashboard() {
     <div className="p-4 space-y-6 pb-20">
       <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
 
-      {/* Progresso do Dia */}
+      {/* Progresso - Círculos */}
       <div className="bg-white rounded-lg shadow p-4">
-        <div className="flex justify-between items-center mb-2">
-          <h2 className="text-lg font-semibold">Progresso do Dia</h2>
-          <span className="text-2xl font-bold text-green-600">{todayData.progress}%</span>
-        </div>
-        <div className="w-full bg-gray-200 rounded-full h-3">
-          <div
-            className="bg-green-600 h-3 rounded-full transition-all"
-            style={{ width: `${todayData.progress}%` }}
-          />
-        </div>
-      </div>
-
-      {/* Progresso da Semana */}
-      <div className="bg-white rounded-lg shadow p-4">
-        <div className="flex justify-between items-center mb-2">
-          <h2 className="text-lg font-semibold">Progresso da Semana</h2>
-          <span className="text-2xl font-bold text-blue-600">{weekProgress}%</span>
-        </div>
-        <div className="w-full bg-gray-200 rounded-full h-3">
-          <div
-            className="bg-blue-600 h-3 rounded-full transition-all"
-            style={{ width: `${weekProgress}%` }}
-          />
-        </div>
-      </div>
-
-      {/* Progresso do Mês */}
-      <div className="bg-white rounded-lg shadow p-4">
-        <div className="flex justify-between items-center mb-2">
-          <h2 className="text-lg font-semibold">Progresso do Mês</h2>
-          <span className="text-2xl font-bold text-purple-600">{monthProgress}%</span>
-        </div>
-        <div className="w-full bg-gray-200 rounded-full h-3">
-          <div
-            className="bg-purple-600 h-3 rounded-full transition-all"
-            style={{ width: `${monthProgress}%` }}
-          />
-        </div>
-      </div>
-
-      {/* Progresso do Ano */}
-      <div className="bg-white rounded-lg shadow p-4">
-        <div className="flex justify-between items-center mb-2">
-          <h2 className="text-lg font-semibold">Progresso do Ano</h2>
-          <span className="text-2xl font-bold text-orange-600">{yearProgress}%</span>
-        </div>
-        <div className="w-full bg-gray-200 rounded-full h-3">
-          <div
-            className="bg-orange-600 h-3 rounded-full transition-all"
-            style={{ width: `${yearProgress}%` }}
-          />
+        <div className="grid grid-cols-4 gap-4">
+          <div className="relative flex items-center justify-center">
+            <ProgressCircle 
+              percentage={todayData.progress} 
+              label="Dia"
+              size={70}
+            />
+          </div>
+          <div className="relative flex items-center justify-center">
+            <ProgressCircle 
+              percentage={weekProgress} 
+              label="Semana"
+              size={70}
+            />
+          </div>
+          <div className="relative flex items-center justify-center">
+            <ProgressCircle 
+              percentage={monthProgress} 
+              label="Mês"
+              size={70}
+            />
+          </div>
+          <div className="relative flex items-center justify-center">
+            <ProgressCircle 
+              percentage={yearProgress} 
+              label="Ano"
+              size={70}
+            />
+          </div>
         </div>
       </div>
 
       {/* Calendário Mensal */}
       <Calendar 
-        checklist={data.checklist || []} 
+        checklist={data.checklist || []}
+        dailyHabits={dailyHabits}
         onDateSelect={(date) => setSelectedCalendarDate(date)}
       />
 
       {selectedCalendarDate && (
-        <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-sm text-blue-800">
+        <div className="rounded-lg p-3 text-sm" style={{ backgroundColor: '#c0d6df', borderColor: '#4f6d7a', color: '#4f6d7a' }}>
           Data selecionada: {new Date(selectedCalendarDate).toLocaleDateString('pt-BR')}
           <button
             onClick={() => setSelectedCalendarDate(null)}
@@ -153,8 +133,8 @@ export default function Dashboard() {
             onClick={() => setActiveTab('alimentacao')}
             className={`flex-1 px-4 py-3 text-center font-medium transition-all ${
               activeTab === 'alimentacao'
-                ? 'bg-green-50 text-green-700 border-b-2 border-green-600'
-                : 'text-gray-600 hover:bg-gray-50'
+                ? 'bg-[#c0d6df] text-[#4f6d7a] border-b-2 border-[#4f6d7a]'
+                : 'text-gray-600 hover:bg-[#eaeaea]'
             }`}
           >
             🍽️ Alimentação
@@ -163,8 +143,8 @@ export default function Dashboard() {
             onClick={() => setActiveTab('habitos')}
             className={`flex-1 px-4 py-3 text-center font-medium transition-all ${
               activeTab === 'habitos'
-                ? 'bg-purple-50 text-purple-700 border-b-2 border-purple-600'
-                : 'text-gray-600 hover:bg-gray-50'
+                ? 'bg-[#c0d6df] text-[#4f6d7a] border-b-2 border-[#4f6d7a]'
+                : 'text-gray-600 hover:bg-[#eaeaea]'
             }`}
           >
             ✨ Hábitos
@@ -177,12 +157,12 @@ export default function Dashboard() {
             <div className="space-y-4">
               <div className="flex justify-between items-center mb-3">
                 <h2 className="text-lg font-semibold">🍽️ Alimentação</h2>
-                <span className="text-xl font-bold text-green-600">{foodProgress}%</span>
+                <span className="text-xl font-bold" style={{ color: '#4f6d7a' }}>{foodProgress}%</span>
               </div>
-              <div className="w-full bg-gray-200 rounded-full h-2 mb-3">
+              <div className="w-full rounded-full h-2 mb-3" style={{ backgroundColor: '#eaeaea' }}>
                 <div
-                  className="bg-green-600 h-2 rounded-full transition-all"
-                  style={{ width: `${foodProgress}%` }}
+                  className="h-2 rounded-full transition-all"
+                  style={{ width: `${foodProgress}%`, backgroundColor: '#4f6d7a' }}
                 />
               </div>
               <div className="space-y-2">
@@ -273,12 +253,12 @@ export default function Dashboard() {
             <div className="space-y-4">
               <div className="flex justify-between items-center mb-3">
                 <h2 className="text-lg font-semibold">✨ Hábitos</h2>
-                <span className="text-xl font-bold text-purple-600">{habitsProgress}%</span>
+                <span className="text-xl font-bold" style={{ color: '#4f6d7a' }}>{habitsProgress}%</span>
               </div>
-              <div className="w-full bg-gray-200 rounded-full h-2 mb-3">
+              <div className="w-full rounded-full h-2 mb-3" style={{ backgroundColor: '#eaeaea' }}>
                 <div
-                  className="bg-purple-600 h-2 rounded-full transition-all"
-                  style={{ width: `${habitsProgress}%` }}
+                  className="h-2 rounded-full transition-all"
+                  style={{ width: `${habitsProgress}%`, backgroundColor: '#4f6d7a' }}
                 />
               </div>
               {dailyHabits.length === 0 ? (

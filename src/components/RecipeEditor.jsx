@@ -1,16 +1,17 @@
 import { useState } from 'react';
+import { useStorage } from '../hooks/useStorage';
 
 export default function RecipeEditor({ recipe, onSave, onCancel }) {
+  const { data } = useStorage();
   const [formData, setFormData] = useState(recipe || {
     name: '',
     category: 'outros',
     prepTime: 15,
     portion: '1 porção',
-    macros: { protein: 0, carbs: 0, fat: 0, kcal: 0 },
-    ingredients: [],
+    ingredients: [], // Array de objetos { id, quantity, unit } ou strings (formato antigo)
     instructions: ''
   });
-  const [newIngredient, setNewIngredient] = useState('');
+  const [newIngredient, setNewIngredient] = useState({ id: '', quantity: 1, unit: 'g' });
 
   const categories = {
     sanduiche: 'Sanduíche',
@@ -20,20 +21,57 @@ export default function RecipeEditor({ recipe, onSave, onCancel }) {
     outros: 'Outros'
   };
 
+  // Obter todos os ingredientes disponíveis
+  const allIngredients = data?.ingredients || {
+    carbos: [],
+    proteinas: [],
+    saladas: [],
+    frutas: [],
+    adicionais: []
+  };
+  const allItems = [
+    ...(allIngredients.carbos || []),
+    ...(allIngredients.proteinas || []),
+    ...(allIngredients.saladas || []),
+    ...(allIngredients.frutas || []),
+    ...(allIngredients.adicionais || [])
+  ];
+
+  // Normalizar ingredientes antigos (strings) para novo formato (objetos)
+  const normalizeIngredients = (ingredients) => {
+    return ingredients.map(ing => {
+      if (typeof ing === 'string') {
+        // Formato antigo: string
+        const foundItem = allItems.find(item => item.name.toLowerCase() === ing.toLowerCase());
+        return foundItem 
+          ? { id: foundItem.id, quantity: 1, unit: foundItem.unit || 'g' }
+          : { id: ing.toLowerCase().replace(/\s+/g, '-'), quantity: 1, unit: 'g', name: ing };
+      }
+      return ing; // Já está no formato novo
+    });
+  };
+
   const handleAddIngredient = () => {
-    if (newIngredient.trim()) {
-      setFormData({
-        ...formData,
-        ingredients: [...formData.ingredients, newIngredient.trim()]
-      });
-      setNewIngredient('');
+    if (newIngredient.id) {
+      const ingredient = allItems.find(item => item.id === newIngredient.id);
+      if (ingredient) {
+        setFormData({
+          ...formData,
+          ingredients: [...normalizeIngredients(formData.ingredients), {
+            id: newIngredient.id,
+            quantity: newIngredient.quantity || 1,
+            unit: ingredient.unit || newIngredient.unit || 'g'
+          }]
+        });
+        setNewIngredient({ id: '', quantity: 1, unit: 'g' });
+      }
     }
   };
 
   const handleRemoveIngredient = (index) => {
     setFormData({
       ...formData,
-      ingredients: formData.ingredients.filter((_, i) => i !== index)
+      ingredients: normalizeIngredients(formData.ingredients).filter((_, i) => i !== index)
     });
   };
 
@@ -60,7 +98,7 @@ export default function RecipeEditor({ recipe, onSave, onCancel }) {
                 type="text"
                 value={formData.name}
                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#4f6d7a] focus:border-[#4f6d7a]"
                 required
               />
             </div>
@@ -73,7 +111,7 @@ export default function RecipeEditor({ recipe, onSave, onCancel }) {
               <select
                 value={formData.category}
                 onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#4f6d7a] focus:border-[#4f6d7a]"
               >
                 {Object.entries(categories).map(([key, label]) => (
                   <option key={key} value={key}>{label}</option>
@@ -91,7 +129,7 @@ export default function RecipeEditor({ recipe, onSave, onCancel }) {
                   type="number"
                   value={formData.prepTime}
                   onChange={(e) => setFormData({ ...formData, prepTime: parseInt(e.target.value) })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#4f6d7a] focus:border-[#4f6d7a]"
                   min="1"
                   required
                 />
@@ -104,70 +142,9 @@ export default function RecipeEditor({ recipe, onSave, onCancel }) {
                   type="text"
                   value={formData.portion}
                   onChange={(e) => setFormData({ ...formData, portion: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#4f6d7a] focus:border-[#4f6d7a]"
                   required
                 />
-              </div>
-            </div>
-
-            {/* Macros */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Macros
-              </label>
-              <div className="grid grid-cols-4 gap-2">
-                <div>
-                  <label className="text-xs text-gray-600">Proteína (g)</label>
-                  <input
-                    type="number"
-                    value={formData.macros.protein}
-                    onChange={(e) => setFormData({
-                      ...formData,
-                      macros: { ...formData.macros, protein: parseInt(e.target.value) || 0 }
-                    })}
-                    className="w-full px-2 py-1 border border-gray-300 rounded"
-                    min="0"
-                  />
-                </div>
-                <div>
-                  <label className="text-xs text-gray-600">Carbo (g)</label>
-                  <input
-                    type="number"
-                    value={formData.macros.carbs}
-                    onChange={(e) => setFormData({
-                      ...formData,
-                      macros: { ...formData.macros, carbs: parseInt(e.target.value) || 0 }
-                    })}
-                    className="w-full px-2 py-1 border border-gray-300 rounded"
-                    min="0"
-                  />
-                </div>
-                <div>
-                  <label className="text-xs text-gray-600">Gordura (g)</label>
-                  <input
-                    type="number"
-                    value={formData.macros.fat}
-                    onChange={(e) => setFormData({
-                      ...formData,
-                      macros: { ...formData.macros, fat: parseInt(e.target.value) || 0 }
-                    })}
-                    className="w-full px-2 py-1 border border-gray-300 rounded"
-                    min="0"
-                  />
-                </div>
-                <div>
-                  <label className="text-xs text-gray-600">Kcal</label>
-                  <input
-                    type="number"
-                    value={formData.macros.kcal}
-                    onChange={(e) => setFormData({
-                      ...formData,
-                      macros: { ...formData.macros, kcal: parseInt(e.target.value) || 0 }
-                    })}
-                    className="w-full px-2 py-1 border border-gray-300 rounded"
-                    min="0"
-                  />
-                </div>
               </div>
             </div>
 
@@ -176,39 +153,106 @@ export default function RecipeEditor({ recipe, onSave, onCancel }) {
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Ingredientes
               </label>
-              <div className="flex gap-2 mb-2">
+              <div className="flex gap-2 mb-2 flex-wrap">
+                <select
+                  value={newIngredient.id}
+                  onChange={(e) => {
+                    const selected = allItems.find(item => item.id === e.target.value);
+                    setNewIngredient({
+                      id: e.target.value,
+                      quantity: newIngredient.quantity || 1,
+                      unit: selected?.unit || 'g'
+                    });
+                  }}
+                  className="flex-1 min-w-[150px] px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#4f6d7a] focus:border-[#4f6d7a]"
+                >
+                  <option value="">Selecione ingrediente</option>
+                  {allItems.map(item => (
+                    <option key={item.id} value={item.id}>
+                      {item.icon} {item.name}
+                    </option>
+                  ))}
+                </select>
                 <input
-                  type="text"
-                  value={newIngredient}
-                  onChange={(e) => setNewIngredient(e.target.value)}
-                  onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), handleAddIngredient())}
-                  placeholder="Adicionar ingrediente"
-                  className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                  type="number"
+                  value={newIngredient.quantity}
+                  onChange={(e) => setNewIngredient({ ...newIngredient, quantity: parseInt(e.target.value) || 1 })}
+                  placeholder="Qtd"
+                  min="1"
+                  className="w-20 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#4f6d7a] focus:border-[#4f6d7a]"
                 />
+                <select
+                  value={newIngredient.unit}
+                  onChange={(e) => setNewIngredient({ ...newIngredient, unit: e.target.value })}
+                  className="w-24 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#4f6d7a] focus:border-[#4f6d7a]"
+                >
+                  <option value="g">g</option>
+                  <option value="un">un</option>
+                  <option value="porção">porção</option>
+                </select>
                 <button
                   type="button"
                   onClick={handleAddIngredient}
-                  className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
+                  className="px-4 py-2 text-white rounded-lg"
+                  style={{ backgroundColor: '#4f6d7a' }}
+                  onMouseEnter={(e) => e.target.style.backgroundColor = '#dd6e42'}
+                  onMouseLeave={(e) => e.target.style.backgroundColor = '#4f6d7a'}
+                  disabled={!newIngredient.id}
                 >
                   +
                 </button>
               </div>
-              <div className="flex flex-wrap gap-2">
-                {formData.ingredients.map((ing, idx) => (
-                  <span
-                    key={idx}
-                    className="px-3 py-1 bg-gray-100 rounded-lg text-sm flex items-center gap-2"
-                  >
-                    {ing}
-                    <button
-                      type="button"
-                      onClick={() => handleRemoveIngredient(idx)}
-                      className="text-red-600 hover:text-red-800"
+              <div className="space-y-2">
+                {normalizeIngredients(formData.ingredients).map((ing, idx) => {
+                  const ingredient = allItems.find(item => item.id === ing.id);
+                  const displayName = ingredient ? `${ingredient.icon} ${ingredient.name}` : (ing.name || ing.id);
+                  const currentQuantity = ing.quantity || 1;
+                  const currentUnit = ing.unit || (ingredient?.unit || 'g');
+                  
+                  return (
+                    <div
+                      key={idx}
+                      className="px-3 py-2 bg-[#eaeaea] rounded-lg text-sm flex items-center justify-between gap-2"
                     >
-                      ×
-                    </button>
-                  </span>
-                ))}
+                      <div className="flex items-center gap-2 flex-1 min-w-0">
+                        <span className="flex-shrink-0">{displayName}</span>
+                        <div className="flex items-center gap-1 flex-shrink-0">
+                          <input
+                            type="number"
+                            value={currentQuantity}
+                            onChange={(e) => {
+                              const newIngredients = [...normalizeIngredients(formData.ingredients)];
+                              newIngredients[idx] = { ...newIngredients[idx], quantity: parseInt(e.target.value) || 1 };
+                              setFormData({ ...formData, ingredients: newIngredients });
+                            }}
+                            min="1"
+                            className="w-16 px-2 py-1 border border-gray-300 rounded text-center"
+                          />
+                          <select
+                            value={currentUnit}
+                            onChange={(e) => {
+                              const newIngredients = [...normalizeIngredients(formData.ingredients)];
+                              newIngredients[idx] = { ...newIngredients[idx], unit: e.target.value };
+                              setFormData({ ...formData, ingredients: newIngredients });
+                            }}
+                            className="px-2 py-1 border border-gray-300 rounded"
+                          >
+                            <option value="g">g</option>
+                            <option value="un">un</option>
+                            <option value="porção">porção</option>
+                          </select>
+                        </div>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveIngredient(idx)}
+                        className="text-[#dd6e42] hover:text-red-800 font-bold flex-shrink-0"
+                      >
+                        ×
+                      </button>
+                    </div>
+                  );
+                })}
               </div>
             </div>
 
@@ -220,7 +264,7 @@ export default function RecipeEditor({ recipe, onSave, onCancel }) {
               <textarea
                 value={formData.instructions}
                 onChange={(e) => setFormData({ ...formData, instructions: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#4f6d7a] focus:border-[#4f6d7a]"
                 rows="4"
                 required
               />
@@ -230,7 +274,10 @@ export default function RecipeEditor({ recipe, onSave, onCancel }) {
             <div className="flex gap-3 pt-4">
               <button
                 type="submit"
-                className="flex-1 px-4 py-2 bg-green-600 text-white rounded-lg font-medium hover:bg-green-700"
+                className="flex-1 px-4 py-2 text-white rounded-lg font-medium"
+                style={{ backgroundColor: '#4f6d7a' }}
+                onMouseEnter={(e) => e.target.style.backgroundColor = '#dd6e42'}
+                onMouseLeave={(e) => e.target.style.backgroundColor = '#4f6d7a'}
               >
                 Salvar
               </button>
@@ -248,4 +295,5 @@ export default function RecipeEditor({ recipe, onSave, onCancel }) {
     </div>
   );
 }
+
 

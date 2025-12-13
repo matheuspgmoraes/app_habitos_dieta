@@ -1,19 +1,43 @@
 // Cálculos de porcentagens e progresso
 
-export function calculateDayProgress(checklistItems) {
+export function calculateDayProgress(checklistItems, customItems = null) {
+  // Se customItems fornecido, usar novo formato (barras de progresso)
+  if (customItems && customItems.length > 0) {
+    let totalProgress = 0;
+    let itemsCount = 0;
+    
+    // Adicionar água separadamente se existir
+    const waterValue = checklistItems['agua'] || 0;
+    if (waterValue !== undefined) {
+      const waterProgress = Math.min((waterValue / 3000) * 100, 100);
+      totalProgress += waterProgress;
+      itemsCount += 1;
+    }
+    
+    customItems.forEach(item => {
+      if (item.key === 'agua') return; // Água já foi processada
+      const value = checklistItems[item.key] || 0;
+      const max = item.max || 1;
+      // Para refeições (0-1), considerar completo se >= 1
+      const itemProgress = value >= max ? 100 : 0;
+      totalProgress += itemProgress;
+      itemsCount += 1;
+    });
+    
+    return itemsCount > 0 ? Math.round(totalProgress / itemsCount) : 0;
+  }
+  
+  // Formato antigo (checkboxes)
   const total = Object.keys(checklistItems).length;
   let completed = 0;
-  
   Object.entries(checklistItems).forEach(([key, value]) => {
     if (key === 'agua') {
-      // Água: considera completo se >= 3L (100%)
       if (value >= 3) completed += 1;
-      else if (value > 0) completed += value / 3; // Proporcional
+      else if (value > 0) completed += value / 3;
     } else {
       if (value) completed += 1;
     }
   });
-  
   return total > 0 ? Math.round((completed / total) * 100) : 0;
 }
 
@@ -126,4 +150,46 @@ export function getDayProgress(checklist, date) {
   const day = checklist.find(d => d.date === date);
   if (!day) return 0;
   return calculateDayProgress(day.items);
+}
+
+// Calcular progresso incluindo hábitos
+export function calculateDayProgressWithHabits(checklistItems, habits = {}, dailyHabits = []) {
+  const foodItems = ['cafe', 'lancheManha', 'almoco', 'lancheTarde', 'jantar', 'posTreino', 'creatina', 'agua'];
+  let foodCompleted = 0;
+  let foodTotal = foodItems.length;
+  
+  foodItems.forEach(key => {
+    if (key === 'agua') {
+      if ((checklistItems?.agua || 0) >= 3) foodCompleted += 1;
+      else if ((checklistItems?.agua || 0) > 0) foodCompleted += (checklistItems.agua || 0) / 3;
+    } else {
+      if (checklistItems?.[key]) foodCompleted += 1;
+    }
+  });
+  
+  const foodProgress = foodTotal > 0 ? (foodCompleted / foodTotal) : 0;
+  
+  // Calcular progresso de hábitos
+  let habitsCompleted = 0;
+  const habitsTotal = dailyHabits.length;
+  
+  if (habitsTotal > 0) {
+    dailyHabits.forEach(habit => {
+      const value = habits[habit.id];
+      let isComplete = false;
+      if (habit.type === 'boolean') {
+        isComplete = value === true;
+      } else if (habit.type === 'quantity' || habit.type === 'timesPerDay' || habit.type === 'timesPerWeek') {
+        isComplete = (value || 0) >= habit.target;
+      }
+      if (isComplete) habitsCompleted += 1;
+    });
+  }
+  
+  const habitsProgress = habitsTotal > 0 ? (habitsCompleted / habitsTotal) : 0;
+  
+  // Progresso total: média ponderada (alimentação 60%, hábitos 40%)
+  const totalProgress = (foodProgress * 0.6) + (habitsProgress * 0.4);
+  
+  return Math.round(totalProgress * 100);
 }

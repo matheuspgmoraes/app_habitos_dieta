@@ -4,6 +4,41 @@ import RecipeEditor from './RecipeEditor';
 
 export default function Recipes() {
   const { data, addRecipe, updateRecipe, deleteRecipe } = useStorage();
+  
+  // Obter todos os ingredientes disponíveis para exibição
+  const allIngredients = data?.ingredients || {
+    carbos: [],
+    proteinas: [],
+    saladas: [],
+    frutas: [],
+    adicionais: []
+  };
+  const allItems = [
+    ...(allIngredients.carbos || []),
+    ...(allIngredients.proteinas || []),
+    ...(allIngredients.saladas || []),
+    ...(allIngredients.frutas || []),
+    ...(allIngredients.adicionais || [])
+  ];
+  
+  // Função para normalizar ingredientes (suporta formato antigo e novo)
+  const normalizeIngredients = (ingredients) => {
+    return ingredients.map(ing => {
+      if (typeof ing === 'string') {
+        return { id: ing.toLowerCase().replace(/\s+/g, '-'), quantity: 1, unit: 'g', name: ing };
+      }
+      return ing;
+    });
+  };
+  
+  // Função para obter nome do ingrediente
+  const getIngredientName = (ing) => {
+    if (typeof ing === 'string') {
+      return ing;
+    }
+    const item = allItems.find(i => i.id === ing.id);
+    return item ? `${item.icon} ${item.name} (${ing.quantity}${ing.unit || 'g'})` : (ing.name || ing.id);
+  };
   const [editingRecipe, setEditingRecipe] = useState(null);
   const [showEditor, setShowEditor] = useState(false);
 
@@ -55,7 +90,10 @@ export default function Recipes() {
             setEditingRecipe(null);
             setShowEditor(true);
           }}
-          className="px-4 py-2 bg-green-600 text-white rounded-lg font-medium hover:bg-green-700"
+          className="px-4 py-2 text-white rounded-lg font-medium"
+          style={{ backgroundColor: '#4f6d7a' }}
+          onMouseEnter={(e) => e.target.style.backgroundColor = '#dd6e42'}
+          onMouseLeave={(e) => e.target.style.backgroundColor = '#4f6d7a'}
         >
           + Nova Receita
         </button>
@@ -83,36 +121,22 @@ export default function Recipes() {
                   <div className="flex gap-2 flex-shrink-0">
                     <button
                       onClick={() => handleEdit(recipe)}
-                      className="px-3 py-1 bg-blue-600 text-white rounded text-sm hover:bg-blue-700 whitespace-nowrap"
+                      className="px-3 py-1 text-white rounded text-sm whitespace-nowrap"
+                      style={{ backgroundColor: '#4f6d7a' }}
+                      onMouseEnter={(e) => e.target.style.backgroundColor = '#dd6e42'}
+                      onMouseLeave={(e) => e.target.style.backgroundColor = '#4f6d7a'}
                     >
                       Editar
                     </button>
                     <button
                       onClick={() => handleDelete(recipe.id)}
-                      className="px-3 py-1 bg-red-600 text-white rounded text-sm hover:bg-red-700 whitespace-nowrap"
+                      className="px-3 py-1 text-white rounded text-sm whitespace-nowrap"
+                      style={{ backgroundColor: '#dd6e42' }}
+                      onMouseEnter={(e) => e.target.style.backgroundColor = '#c55a2e'}
+                      onMouseLeave={(e) => e.target.style.backgroundColor = '#dd6e42'}
                     >
                       Excluir
                     </button>
-                  </div>
-                </div>
-
-                {/* Macros */}
-                <div className="grid grid-cols-4 gap-2 mb-3">
-                  <div className="bg-red-50 rounded p-2 text-center">
-                    <div className="text-xs text-gray-600">Proteína</div>
-                    <div className="text-sm font-bold text-red-600">{recipe.macros.protein}g</div>
-                  </div>
-                  <div className="bg-blue-50 rounded p-2 text-center">
-                    <div className="text-xs text-gray-600">Carbo</div>
-                    <div className="text-sm font-bold text-blue-600">{recipe.macros.carbs}g</div>
-                  </div>
-                  <div className="bg-yellow-50 rounded p-2 text-center">
-                    <div className="text-xs text-gray-600">Gordura</div>
-                    <div className="text-sm font-bold text-yellow-600">{recipe.macros.fat}g</div>
-                  </div>
-                  <div className="bg-green-50 rounded p-2 text-center">
-                    <div className="text-xs text-gray-600">Kcal</div>
-                    <div className="text-sm font-bold text-green-600">{recipe.macros.kcal}</div>
                   </div>
                 </div>
 
@@ -125,7 +149,19 @@ export default function Recipes() {
                 {/* Ingredientes */}
                 <div className="mb-3">
                   <h4 className="text-sm font-semibold text-gray-700 mb-1">Ingredientes:</h4>
-                  <p className="text-sm text-gray-600 break-words">{recipe.ingredients.join(', ')}</p>
+                  <ul className="list-disc list-inside space-y-1">
+                    {normalizeIngredients(recipe.ingredients || []).map((ing, idx) => {
+                      const item = allItems.find(i => i.id === ing.id);
+                      const displayName = item ? `${item.icon} ${item.name}` : (ing.name || ing.id);
+                      const quantity = ing.quantity || 1;
+                      const unit = ing.unit || (item?.unit || 'g');
+                      return (
+                        <li key={idx} className="text-sm text-gray-600">
+                          <span className="font-medium">{quantity}{unit}</span> - {displayName}
+                        </li>
+                      );
+                    })}
+                  </ul>
                 </div>
 
                 {/* Instruções */}

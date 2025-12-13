@@ -1,7 +1,7 @@
 import { useState } from 'react';
-import { getDayProgress, getProgressColor } from '../utils/calculations';
+import { getDayProgress, getProgressColor, calculateDayProgressWithHabits } from '../utils/calculations';
 
-export default function Calendar({ checklist, onDateSelect }) {
+export default function Calendar({ checklist, dailyHabits = [], onDateSelect }) {
   const [currentDate, setCurrentDate] = useState(new Date());
   const year = currentDate.getFullYear();
   const month = currentDate.getMonth();
@@ -84,7 +84,11 @@ export default function Calendar({ checklist, onDateSelect }) {
         {Array.from({ length: daysInMonth }, (_, i) => {
           const day = i + 1;
           const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-          const progress = getDayProgress(checklist, dateStr);
+          const dayData = checklist.find(d => d.date === dateStr);
+          const habits = dayData?.habits || {};
+          const progress = dayData 
+            ? calculateDayProgressWithHabits(dayData.items, habits, dailyHabits)
+            : 0;
           const color = getProgressColor(progress);
           const isToday = isCurrentMonth && day === todayDate;
 
@@ -94,17 +98,23 @@ export default function Calendar({ checklist, onDateSelect }) {
               onClick={() => onDateSelect && onDateSelect(dateStr)}
               className={`aspect-square rounded-lg text-sm font-medium transition-all ${
                 isToday
-                  ? 'ring-2 ring-blue-500'
+                  ? 'ring-2'
                   : ''
               } ${
                 color === 'green'
-                  ? 'bg-green-500 text-white hover:bg-green-600'
+                  ? 'text-white'
                   : color === 'yellow'
-                  ? 'bg-yellow-400 text-gray-900 hover:bg-yellow-500'
+                  ? 'text-gray-900'
                   : progress > 0
-                  ? 'bg-red-400 text-white hover:bg-red-500'
+                  ? 'text-white'
                   : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
               }`}
+              style={{
+                ...(isToday ? { ringColor: '#4f6d7a' } : {}),
+                ...(color === 'green' ? { backgroundColor: '#4f6d7a' } : {}),
+                ...(color === 'yellow' ? { backgroundColor: '#c0d6df' } : {}),
+                ...(progress > 0 && color !== 'green' && color !== 'yellow' ? { backgroundColor: '#dd6e42' } : {})
+              }}
               title={`${day}/${month + 1}: ${progress}%`}
             >
               <div>{day}</div>
@@ -119,11 +129,11 @@ export default function Calendar({ checklist, onDateSelect }) {
       {/* Legenda */}
       <div className="mt-4 flex items-center justify-center gap-4 text-xs">
         <div className="flex items-center gap-1">
-          <div className="w-4 h-4 rounded bg-green-500"></div>
+          <div className="w-4 h-4 rounded" style={{ backgroundColor: '#4f6d7a' }}></div>
           <span>80-100%</span>
         </div>
         <div className="flex items-center gap-1">
-          <div className="w-4 h-4 rounded bg-yellow-400"></div>
+          <div className="w-4 h-4 rounded" style={{ backgroundColor: '#c0d6df' }}></div>
           <span>50-79%</span>
         </div>
         <div className="flex items-center gap-1">
@@ -138,4 +148,5 @@ export default function Calendar({ checklist, onDateSelect }) {
     </div>
   );
 }
+
 
