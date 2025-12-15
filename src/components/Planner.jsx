@@ -128,12 +128,22 @@ export default function Planner() {
   // Garantir que planner existe e é um array
   if (!data.planner) {
     // Inicializar planner se não existir
-    const updated = { ...data, planner: [] };
-    updateData(updated);
-    return <div className="p-4">Inicializando planner...</div>;
+    try {
+      const updated = { ...data, planner: [] };
+      updateData(updated);
+    } catch (error) {
+      console.error('Erro ao inicializar planner:', error);
+    }
   }
   
   if (!Array.isArray(data.planner)) {
+    // Tentar corrigir se não for array
+    try {
+      const updated = { ...data, planner: [] };
+      updateData(updated);
+    } catch (error) {
+      console.error('Erro ao corrigir planner:', error);
+    }
     return <div className="p-4">Erro: Planner não inicializado. Recarregue a página.</div>;
   }
 
@@ -164,11 +174,53 @@ export default function Planner() {
 
   // Obter ou criar dia do planner
   const getOrCreateDay = (dateStr) => {
-    const dayIndex = data.planner.findIndex(d => d.date === dateStr);
-    if (dayIndex === -1) {
-      // Criar dia se não existir (mas não atualizar ainda para evitar re-render)
-      const date = new Date(dateStr);
-      const dayOfWeek = date.getDay();
+    try {
+      if (!data.planner || !Array.isArray(data.planner)) {
+        return {
+          date: dateStr,
+          meals: {
+            cafe: { time: '07:00', recipeId: null, recipeName: null, items: [] },
+            lancheManha: { time: '09:00', recipeId: null, recipeName: null, items: [] },
+            almoco: { time: '12:30', recipeId: null, recipeName: null, items: [] },
+            lancheTarde: { time: '15:30', recipeId: null, recipeName: null, items: [] },
+            jantar: { time: '18:30', recipeId: null, recipeName: null, items: [] },
+            posTreino: { time: null, recipeId: null, recipeName: null, items: [] }
+          },
+          activities: []
+        };
+      }
+      const dayIndex = data.planner.findIndex(d => d && d.date === dateStr);
+      if (dayIndex === -1) {
+        // Criar dia se não existir (mas não atualizar ainda para evitar re-render)
+        const date = new Date(dateStr);
+        const dayOfWeek = date.getDay();
+        return {
+          date: dateStr,
+          meals: {
+            cafe: { time: '07:00', recipeId: null, recipeName: null, items: [] },
+            lancheManha: { time: '09:00', recipeId: null, recipeName: null, items: [] },
+            almoco: { time: '12:30', recipeId: null, recipeName: null, items: [] },
+            lancheTarde: { time: '15:30', recipeId: null, recipeName: null, items: [] },
+            jantar: { time: dayOfWeek === 1 || dayOfWeek === 3 ? '18:00' : '18:30', recipeId: null, recipeName: null, items: [] },
+            posTreino: { time: (dayOfWeek === 1 || dayOfWeek === 3) ? '22:00' : null, recipeId: null, recipeName: null, items: [] }
+          },
+          activities: []
+        };
+      }
+      return data.planner[dayIndex] || {
+        date: dateStr,
+        meals: {
+          cafe: { time: '07:00', recipeId: null, recipeName: null, items: [] },
+          lancheManha: { time: '09:00', recipeId: null, recipeName: null, items: [] },
+          almoco: { time: '12:30', recipeId: null, recipeName: null, items: [] },
+          lancheTarde: { time: '15:30', recipeId: null, recipeName: null, items: [] },
+          jantar: { time: '18:30', recipeId: null, recipeName: null, items: [] },
+          posTreino: { time: null, recipeId: null, recipeName: null, items: [] }
+        },
+        activities: []
+      };
+    } catch (error) {
+      console.error('Erro ao obter/criar dia:', error);
       return {
         date: dateStr,
         meals: {
@@ -176,21 +228,34 @@ export default function Planner() {
           lancheManha: { time: '09:00', recipeId: null, recipeName: null, items: [] },
           almoco: { time: '12:30', recipeId: null, recipeName: null, items: [] },
           lancheTarde: { time: '15:30', recipeId: null, recipeName: null, items: [] },
-          jantar: { time: dayOfWeek === 1 || dayOfWeek === 3 ? '18:00' : '18:30', recipeId: null, recipeName: null, items: [] },
-          posTreino: { time: (dayOfWeek === 1 || dayOfWeek === 3) ? '22:00' : null, recipeId: null, recipeName: null, items: [] }
+          jantar: { time: '18:30', recipeId: null, recipeName: null, items: [] },
+          posTreino: { time: null, recipeId: null, recipeName: null, items: [] }
         },
         activities: []
       };
     }
-    return data.planner[dayIndex];
   };
 
-  // Garantir que planner existe
-  if (!data.planner || !Array.isArray(data.planner)) {
-    return <div className="p-4">Erro: Planner não inicializado. Recarregue a página.</div>;
+  // Obter dia selecionado com tratamento de erro
+  let selectedDay;
+  try {
+    selectedDay = getOrCreateDay(selectedDate);
+  } catch (error) {
+    console.error('Erro ao obter dia selecionado:', error);
+    selectedDay = {
+      date: selectedDate,
+      meals: {
+        cafe: { time: '07:00', recipeId: null, recipeName: null, items: [] },
+        lancheManha: { time: '09:00', recipeId: null, recipeName: null, items: [] },
+        almoco: { time: '12:30', recipeId: null, recipeName: null, items: [] },
+        lancheTarde: { time: '15:30', recipeId: null, recipeName: null, items: [] },
+        jantar: { time: '18:30', recipeId: null, recipeName: null, items: [] },
+        posTreino: { time: null, recipeId: null, recipeName: null, items: [] }
+      },
+      activities: []
+    };
   }
-
-  const selectedDay = getOrCreateDay(selectedDate);
+  
   const dayOfWeek = new Date(selectedDate).getDay();
   const isWork = isWorkDay(selectedDate);
   const dayActivities = selectedDay?.activities || [];
