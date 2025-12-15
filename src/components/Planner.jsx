@@ -317,33 +317,51 @@ export default function Planner() {
 
   // Toggle item individual ou atualizar quantidade
   const toggleIndividualItem = (mealType, itemId, quantity = 1) => {
-    const meal = selectedDay?.meals[mealType] || { items: [] };
-    const currentItems = meal.items || [];
-    
-    // Converter formato antigo (array de strings) para novo (array de objetos)
-    const normalizedItems = currentItems.map(item => 
-      typeof item === 'string' ? { id: item, quantity: 1 } : item
-    );
-    
-    const existingIndex = normalizedItems.findIndex(item => item.id === itemId);
-    let newItems;
-    
-    if (existingIndex >= 0) {
-      // Se já existe, remover ou atualizar quantidade
-      if (quantity <= 0 || isNaN(quantity)) {
-        newItems = normalizedItems.filter(item => item.id !== itemId);
+    try {
+      const meal = selectedDay?.meals?.[mealType] || { items: [] };
+      const currentItems = meal.items || [];
+      
+      // Converter formato antigo (array de strings) para novo (array de objetos)
+      const normalizedItems = currentItems.map(item => {
+        if (typeof item === 'string') {
+          return { id: item, quantity: 1 };
+        }
+        // Garantir que tem id e quantity válidos
+        if (!item || !item.id) {
+          return null;
+        }
+        return {
+          id: item.id,
+          quantity: typeof item.quantity === 'number' && !isNaN(item.quantity) ? item.quantity : 1
+        };
+      }).filter(item => item !== null);
+      
+      const existingIndex = normalizedItems.findIndex(item => item.id === itemId);
+      let newItems;
+      
+      if (existingIndex >= 0) {
+        // Se já existe, remover ou atualizar quantidade
+        if (quantity <= 0 || isNaN(quantity)) {
+          newItems = normalizedItems.filter(item => item.id !== itemId);
+        } else {
+          newItems = [...normalizedItems];
+          // Garantir que quantity é um número válido
+          newItems[existingIndex] = { id: itemId, quantity: parseFloat(quantity) || 1 };
+        }
       } else {
-        newItems = [...normalizedItems];
-        // Garantir que quantity é um número válido
-        newItems[existingIndex] = { id: itemId, quantity: parseFloat(quantity) || 1 };
+        // Adicionar novo item - garantir que quantity é um número válido
+        const validQuantity = parseFloat(quantity);
+        if (isNaN(validQuantity) || validQuantity <= 0) {
+          return; // Não adicionar se quantidade inválida
+        }
+        newItems = [...normalizedItems, { id: itemId, quantity: validQuantity }];
       }
-    } else {
-      // Adicionar novo item - garantir que quantity é um número válido
-      const validQuantity = parseFloat(quantity) || 1;
-      newItems = [...normalizedItems, { id: itemId, quantity: validQuantity }];
+      
+      handleItemsSelect(mealType, newItems);
+    } catch (error) {
+      console.error('Erro ao toggle item:', error);
+      // Não fazer nada em caso de erro para evitar quebrar a página
     }
-    
-    handleItemsSelect(mealType, newItems);
   };
 
   // Renderizar seleção de refeição
@@ -425,10 +443,10 @@ export default function Planner() {
                       {individualItems.carbos.map(item => {
                         const isSelected = selectedItemsMap.has(item.id);
                         const savedQuantity = isSelected ? selectedItemsMap.get(item.id) : null;
-                        // Se está selecionado, usar quantidade salva ou valor base; se não está selecionado, não mostrar quantidade
+                        // Se está selecionado, usar quantidade salva; se não está selecionado, não mostrar quantidade
                         const displayQuantity = savedQuantity !== null && savedQuantity !== undefined 
                           ? savedQuantity 
-                          : (isSelected && item.hasBaseQuantity ? parseFloat(item.baseQuantity) : null);
+                          : (isSelected && item.hasBaseQuantity ? parseFloat(item.baseQuantity) : 1);
                         return (
                           <div key={item.id} className="flex items-center gap-1">
                             <button
@@ -459,7 +477,7 @@ export default function Planner() {
                                   type="number"
                                   min="0.1"
                                   step="0.1"
-                                  value={displayQuantity !== null && displayQuantity !== undefined ? displayQuantity : (item.hasBaseQuantity ? parseFloat(item.baseQuantity) || 1 : 1)}
+                                  value={displayQuantity || 1}
                                   onChange={(e) => {
                                     const inputValue = e.target.value;
                                     if (inputValue === '' || inputValue === '0') {
@@ -522,7 +540,7 @@ export default function Planner() {
                                   type="number"
                                   min="0.1"
                                   step="0.1"
-                                  value={displayQuantity !== null && displayQuantity !== undefined ? displayQuantity : (item.hasBaseQuantity ? parseFloat(item.baseQuantity) || 1 : 1)}
+                                  value={savedQuantity !== null && savedQuantity !== undefined ? savedQuantity : (item.hasBaseQuantity ? parseFloat(item.baseQuantity) || 1 : 1)}
                                   onChange={(e) => {
                                     const inputValue = e.target.value;
                                     if (inputValue === '' || inputValue === '0') {
@@ -585,7 +603,7 @@ export default function Planner() {
                                   type="number"
                                   min="0.1"
                                   step="0.1"
-                                  value={displayQuantity !== null && displayQuantity !== undefined ? displayQuantity : (item.hasBaseQuantity ? parseFloat(item.baseQuantity) || 1 : 1)}
+                                  value={savedQuantity !== null && savedQuantity !== undefined ? savedQuantity : (item.hasBaseQuantity ? parseFloat(item.baseQuantity) || 1 : 1)}
                                   onChange={(e) => {
                                     const inputValue = e.target.value;
                                     if (inputValue === '' || inputValue === '0') {
