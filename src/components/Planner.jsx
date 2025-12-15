@@ -125,8 +125,15 @@ export default function Planner() {
 
   if (!data) return <div className="p-4">Carregando...</div>;
 
-  // Garantir que planner existe
-  if (!data.planner || !Array.isArray(data.planner)) {
+  // Garantir que planner existe e é um array
+  if (!data.planner) {
+    // Inicializar planner se não existir
+    const updated = { ...data, planner: [] };
+    updateData(updated);
+    return <div className="p-4">Inicializando planner...</div>;
+  }
+  
+  if (!Array.isArray(data.planner)) {
     return <div className="p-4">Erro: Planner não inicializado. Recarregue a página.</div>;
   }
 
@@ -323,15 +330,17 @@ export default function Planner() {
     
     if (existingIndex >= 0) {
       // Se já existe, remover ou atualizar quantidade
-      if (quantity <= 0) {
+      if (quantity <= 0 || isNaN(quantity)) {
         newItems = normalizedItems.filter(item => item.id !== itemId);
       } else {
         newItems = [...normalizedItems];
-        newItems[existingIndex] = { id: itemId, quantity };
+        // Garantir que quantity é um número válido
+        newItems[existingIndex] = { id: itemId, quantity: parseFloat(quantity) || 1 };
       }
     } else {
-      // Adicionar novo item
-      newItems = [...normalizedItems, { id: itemId, quantity }];
+      // Adicionar novo item - garantir que quantity é um número válido
+      const validQuantity = parseFloat(quantity) || 1;
+      newItems = [...normalizedItems, { id: itemId, quantity: validQuantity }];
     }
     
     handleItemsSelect(mealType, newItems);
@@ -415,14 +424,18 @@ export default function Planner() {
                     <div className="flex flex-wrap gap-2">
                       {individualItems.carbos.map(item => {
                         const isSelected = selectedItemsMap.has(item.id);
-                        const quantity = selectedItemsMap.get(item.id) || 0;
+                        const savedQuantity = isSelected ? selectedItemsMap.get(item.id) : null;
+                        // Se está selecionado, usar quantidade salva ou valor base; se não está selecionado, não mostrar quantidade
+                        const displayQuantity = savedQuantity !== null && savedQuantity !== undefined 
+                          ? savedQuantity 
+                          : (isSelected && item.hasBaseQuantity ? parseFloat(item.baseQuantity) : null);
                         return (
                           <div key={item.id} className="flex items-center gap-1">
                             <button
                               onClick={() => {
                                 if (!isSelected) {
                                   // Se tem valor base, usar ele, senão usar 1
-                                  const baseQty = item.hasBaseQuantity ? (item.baseQuantity || 1) : 1;
+                                  const baseQty = item.hasBaseQuantity ? parseFloat(item.baseQuantity) || 1 : 1;
                                   toggleIndividualItem(mealType, item.id, baseQty);
                                 } else {
                                   toggleIndividualItem(mealType, item.id, 0);
@@ -444,11 +457,19 @@ export default function Planner() {
                               <div className="flex items-center gap-1">
                                 <input
                                   type="number"
-                                  min="1"
-                                  value={quantity}
+                                  min="0.1"
+                                  step="0.1"
+                                  value={displayQuantity !== null && displayQuantity !== undefined ? displayQuantity : (item.hasBaseQuantity ? parseFloat(item.baseQuantity) || 1 : 1)}
                                   onChange={(e) => {
-                                    const newQty = parseInt(e.target.value) || 1;
-                                    toggleIndividualItem(mealType, item.id, newQty);
+                                    const inputValue = e.target.value;
+                                    if (inputValue === '' || inputValue === '0') {
+                                      toggleIndividualItem(mealType, item.id, 0);
+                                    } else {
+                                      const newQty = parseFloat(inputValue);
+                                      if (!isNaN(newQty) && newQty > 0) {
+                                        toggleIndividualItem(mealType, item.id, newQty);
+                                      }
+                                    }
                                   }}
                                   onClick={(e) => e.stopPropagation()}
                                   className="w-16 px-1 py-1 border border-gray-300 rounded text-center text-sm"
@@ -468,14 +489,16 @@ export default function Planner() {
                     <div className="flex flex-wrap gap-2">
                       {individualItems.proteinas.map(item => {
                         const isSelected = selectedItemsMap.has(item.id);
-                        const quantity = selectedItemsMap.get(item.id) || 0;
+                        const savedQuantity = isSelected ? selectedItemsMap.get(item.id) : null;
+                        const displayQuantity = savedQuantity !== null && savedQuantity !== undefined 
+                          ? savedQuantity 
+                          : (isSelected && item.hasBaseQuantity ? parseFloat(item.baseQuantity) : null);
                         return (
                           <div key={item.id} className="flex items-center gap-1">
                             <button
                               onClick={() => {
                                 if (!isSelected) {
-                                  // Se tem valor base, usar ele, senão usar 1
-                                  const baseQty = item.hasBaseQuantity ? (item.baseQuantity || 1) : 1;
+                                  const baseQty = item.hasBaseQuantity ? parseFloat(item.baseQuantity) || 1 : 1;
                                   toggleIndividualItem(mealType, item.id, baseQty);
                                 } else {
                                   toggleIndividualItem(mealType, item.id, 0);
@@ -497,11 +520,19 @@ export default function Planner() {
                               <div className="flex items-center gap-1">
                                 <input
                                   type="number"
-                                  min="1"
-                                  value={quantity}
+                                  min="0.1"
+                                  step="0.1"
+                                  value={displayQuantity !== null && displayQuantity !== undefined ? displayQuantity : (item.hasBaseQuantity ? parseFloat(item.baseQuantity) || 1 : 1)}
                                   onChange={(e) => {
-                                    const newQty = parseInt(e.target.value) || 1;
-                                    toggleIndividualItem(mealType, item.id, newQty);
+                                    const inputValue = e.target.value;
+                                    if (inputValue === '' || inputValue === '0') {
+                                      toggleIndividualItem(mealType, item.id, 0);
+                                    } else {
+                                      const newQty = parseFloat(inputValue);
+                                      if (!isNaN(newQty) && newQty > 0) {
+                                        toggleIndividualItem(mealType, item.id, newQty);
+                                      }
+                                    }
                                   }}
                                   onClick={(e) => e.stopPropagation()}
                                   className="w-16 px-1 py-1 border border-gray-300 rounded text-center text-sm"
@@ -521,14 +552,16 @@ export default function Planner() {
                     <div className="flex flex-wrap gap-2">
                       {individualItems.saladas.map(item => {
                         const isSelected = selectedItemsMap.has(item.id);
-                        const quantity = selectedItemsMap.get(item.id) || 0;
+                        const savedQuantity = isSelected ? selectedItemsMap.get(item.id) : null;
+                        const displayQuantity = savedQuantity !== null && savedQuantity !== undefined 
+                          ? savedQuantity 
+                          : (isSelected && item.hasBaseQuantity ? parseFloat(item.baseQuantity) : null);
                         return (
                           <div key={item.id} className="flex items-center gap-1">
                             <button
                               onClick={() => {
                                 if (!isSelected) {
-                                  // Se tem valor base, usar ele, senão usar 1
-                                  const baseQty = item.hasBaseQuantity ? (item.baseQuantity || 1) : 1;
+                                  const baseQty = item.hasBaseQuantity ? parseFloat(item.baseQuantity) || 1 : 1;
                                   toggleIndividualItem(mealType, item.id, baseQty);
                                 } else {
                                   toggleIndividualItem(mealType, item.id, 0);
@@ -550,11 +583,19 @@ export default function Planner() {
                               <div className="flex items-center gap-1">
                                 <input
                                   type="number"
-                                  min="1"
-                                  value={quantity}
+                                  min="0.1"
+                                  step="0.1"
+                                  value={displayQuantity !== null && displayQuantity !== undefined ? displayQuantity : (item.hasBaseQuantity ? parseFloat(item.baseQuantity) || 1 : 1)}
                                   onChange={(e) => {
-                                    const newQty = parseInt(e.target.value) || 1;
-                                    toggleIndividualItem(mealType, item.id, newQty);
+                                    const inputValue = e.target.value;
+                                    if (inputValue === '' || inputValue === '0') {
+                                      toggleIndividualItem(mealType, item.id, 0);
+                                    } else {
+                                      const newQty = parseFloat(inputValue);
+                                      if (!isNaN(newQty) && newQty > 0) {
+                                        toggleIndividualItem(mealType, item.id, newQty);
+                                      }
+                                    }
                                   }}
                                   onClick={(e) => e.stopPropagation()}
                                   className="w-16 px-1 py-1 border border-gray-300 rounded text-center text-sm"
@@ -575,14 +616,16 @@ export default function Planner() {
                       <div className="flex flex-wrap gap-2">
                         {individualItems.frutas.map(item => {
                           const isSelected = selectedItemsMap.has(item.id);
-                          const quantity = selectedItemsMap.get(item.id) || 0;
+                          const savedQuantity = isSelected ? selectedItemsMap.get(item.id) : null;
+                          const displayQuantity = savedQuantity !== null && savedQuantity !== undefined 
+                            ? savedQuantity 
+                            : (isSelected && item.hasBaseQuantity ? parseFloat(item.baseQuantity) : null);
                           return (
                             <div key={item.id} className="flex items-center gap-1">
                               <button
                                 onClick={() => {
                                   if (!isSelected) {
-                                    // Se tem valor base, usar ele, senão usar 1
-                                    const baseQty = item.hasBaseQuantity ? (item.baseQuantity || 1) : 1;
+                                    const baseQty = item.hasBaseQuantity ? parseFloat(item.baseQuantity) || 1 : 1;
                                     toggleIndividualItem(mealType, item.id, baseQty);
                                   } else {
                                     toggleIndividualItem(mealType, item.id, 0);
@@ -601,17 +644,28 @@ export default function Planner() {
                                 )}
                               </button>
                               {isSelected && (
-                                <input
-                                  type="number"
-                                  min="1"
-                                  value={quantity}
-                                  onChange={(e) => {
-                                    const newQty = parseInt(e.target.value) || 1;
-                                    toggleIndividualItem(mealType, item.id, newQty);
-                                  }}
-                                  onClick={(e) => e.stopPropagation()}
-                                  className="w-12 px-1 py-1 border border-gray-300 rounded text-center text-sm"
-                                />
+                                <div className="flex items-center gap-1">
+                                  <input
+                                    type="number"
+                                    min="0.1"
+                                    step="0.1"
+                                    value={displayQuantity !== null && displayQuantity !== undefined ? displayQuantity : (item.hasBaseQuantity ? parseFloat(item.baseQuantity) || 1 : 1)}
+                                    onChange={(e) => {
+                                      const inputValue = e.target.value;
+                                      if (inputValue === '' || inputValue === '0') {
+                                        toggleIndividualItem(mealType, item.id, 0);
+                                      } else {
+                                        const newQty = parseFloat(inputValue);
+                                        if (!isNaN(newQty) && newQty > 0) {
+                                          toggleIndividualItem(mealType, item.id, newQty);
+                                        }
+                                      }
+                                    }}
+                                    onClick={(e) => e.stopPropagation()}
+                                    className="w-16 px-1 py-1 border border-gray-300 rounded text-center text-sm"
+                                  />
+                                  <span className="text-xs text-gray-500">{item.unit || 'g'}</span>
+                                </div>
                               )}
                             </div>
                           );
@@ -627,14 +681,16 @@ export default function Planner() {
                       <div className="flex flex-wrap gap-2">
                         {individualItems.outros.map(item => {
                           const isSelected = selectedItemsMap.has(item.id);
-                          const quantity = selectedItemsMap.get(item.id) || 0;
+                          const savedQuantity = isSelected ? selectedItemsMap.get(item.id) : null;
+                          const displayQuantity = savedQuantity !== null && savedQuantity !== undefined 
+                            ? savedQuantity 
+                            : (isSelected && item.hasBaseQuantity ? parseFloat(item.baseQuantity) : null);
                           return (
                             <div key={item.id} className="flex items-center gap-1">
                               <button
                                 onClick={() => {
                                   if (!isSelected) {
-                                    // Se tem valor base, usar ele, senão usar 1
-                                    const baseQty = item.hasBaseQuantity ? (item.baseQuantity || 1) : 1;
+                                    const baseQty = item.hasBaseQuantity ? parseFloat(item.baseQuantity) || 1 : 1;
                                     toggleIndividualItem(mealType, item.id, baseQty);
                                   } else {
                                     toggleIndividualItem(mealType, item.id, 0);
@@ -653,17 +709,28 @@ export default function Planner() {
                                 )}
                               </button>
                               {isSelected && (
-                                <input
-                                  type="number"
-                                  min="1"
-                                  value={quantity}
-                                  onChange={(e) => {
-                                    const newQty = parseInt(e.target.value) || 1;
-                                    toggleIndividualItem(mealType, item.id, newQty);
-                                  }}
-                                  onClick={(e) => e.stopPropagation()}
-                                  className="w-12 px-1 py-1 border border-gray-300 rounded text-center text-sm"
-                                />
+                                <div className="flex items-center gap-1">
+                                  <input
+                                    type="number"
+                                    min="0.1"
+                                    step="0.1"
+                                    value={displayQuantity !== null && displayQuantity !== undefined ? displayQuantity : (item.hasBaseQuantity ? parseFloat(item.baseQuantity) || 1 : 1)}
+                                    onChange={(e) => {
+                                      const inputValue = e.target.value;
+                                      if (inputValue === '' || inputValue === '0') {
+                                        toggleIndividualItem(mealType, item.id, 0);
+                                      } else {
+                                        const newQty = parseFloat(inputValue);
+                                        if (!isNaN(newQty) && newQty > 0) {
+                                          toggleIndividualItem(mealType, item.id, newQty);
+                                        }
+                                      }
+                                    }}
+                                    onClick={(e) => e.stopPropagation()}
+                                    className="w-16 px-1 py-1 border border-gray-300 rounded text-center text-sm"
+                                  />
+                                  <span className="text-xs text-gray-500">{item.unit || 'g'}</span>
+                                </div>
                               )}
                             </div>
                           );

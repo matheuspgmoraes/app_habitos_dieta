@@ -103,6 +103,9 @@ export default function Ingredients() {
   const handleSaveIngredient = (group, index) => {
     const editId = `${group}-${index}`;
     const editedData = editingData[editId];
+    const currentIngredient = ingredients[group][index];
+    
+    // Se não há dados editados, apenas fechar
     if (!editedData) {
       setEditingId(null);
       return;
@@ -114,7 +117,15 @@ export default function Ingredients() {
     }
     // Criar uma cópia do array para garantir que o React detecte a mudança
     const groupArray = [...(updated.ingredients[group] || [])];
-    groupArray[index] = { ...groupArray[index], ...editedData };
+    // Mesclar dados editados com dados existentes, garantindo que campos booleanos sejam preservados
+    groupArray[index] = { 
+      ...currentIngredient, 
+      ...editedData,
+      // Garantir que hasBaseQuantity seja explicitamente definido (true ou false)
+      hasBaseQuantity: editedData.hasBaseQuantity !== undefined ? editedData.hasBaseQuantity : (currentIngredient.hasBaseQuantity || false),
+      // Se hasBaseQuantity for false, remover baseQuantity
+      baseQuantity: editedData.hasBaseQuantity === false ? undefined : (editedData.baseQuantity !== undefined ? editedData.baseQuantity : currentIngredient.baseQuantity)
+    };
     updated.ingredients[group] = groupArray;
     updateData(updated);
     
@@ -286,9 +297,14 @@ export default function Ingredients() {
                         )}
                         <button
                           onClick={() => {
+                            // Inicializar com todos os campos do ingrediente, incluindo hasBaseQuantity e baseQuantity
                             setEditingData(prev => ({
                               ...prev,
-                              [editId]: { ...ingredient }
+                              [editId]: { 
+                                ...ingredient,
+                                hasBaseQuantity: ingredient.hasBaseQuantity || false,
+                                baseQuantity: ingredient.baseQuantity || undefined
+                              }
                             }));
                             setEditingId(editId);
                           }}
