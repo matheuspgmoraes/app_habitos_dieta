@@ -244,6 +244,26 @@ export default function Ingredients() {
                           <option value="un">un</option>
                           <option value="porção">porção</option>
                         </select>
+                        <div className="flex items-center gap-1 flex-shrink-0">
+                          <input
+                            type="checkbox"
+                            checked={displayIngredient.hasBaseQuantity || false}
+                            onChange={(e) => handleEditIngredient(groupKey, idx, { hasBaseQuantity: e.target.checked })}
+                            className="w-4 h-4"
+                          />
+                          <span className="text-xs text-gray-600">Base</span>
+                        </div>
+                        {displayIngredient.hasBaseQuantity && (
+                          <input
+                            type="number"
+                            value={displayIngredient.baseQuantity || ''}
+                            onChange={(e) => handleEditIngredient(groupKey, idx, { baseQuantity: parseFloat(e.target.value) || 0 })}
+                            placeholder="Qtd"
+                            className="w-16 px-1 py-1 border border-gray-300 rounded text-xs text-center"
+                            min="0"
+                            step="0.1"
+                          />
+                        )}
                         <button
                           onClick={() => handleSaveIngredient(groupKey, idx)}
                           className="px-2 py-1 text-white rounded text-xs flex-shrink-0"
@@ -259,6 +279,11 @@ export default function Ingredients() {
                         <span className="text-xl flex-shrink-0">{ingredient.icon}</span>
                         <span className="flex-1 text-sm font-medium break-words min-w-0">{ingredient.name}</span>
                         <span className="text-xs text-gray-500 flex-shrink-0">({ingredient.unit || 'g'})</span>
+                        {ingredient.hasBaseQuantity && (
+                          <span className="text-xs text-gray-600 flex-shrink-0 px-1 py-0.5 rounded" style={{ backgroundColor: '#c0d6df' }}>
+                            Base: {ingredient.baseQuantity || 0}{ingredient.unit || 'g'}
+                          </span>
+                        )}
                         <button
                           onClick={() => {
                             setEditingData(prev => ({

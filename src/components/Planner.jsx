@@ -419,7 +419,15 @@ export default function Planner() {
                         return (
                           <div key={item.id} className="flex items-center gap-1">
                             <button
-                              onClick={() => toggleIndividualItem(mealType, item.id, isSelected ? 0 : 1)}
+                              onClick={() => {
+                                if (!isSelected) {
+                                  // Se tem valor base, usar ele, senão usar 1
+                                  const baseQty = item.hasBaseQuantity ? (item.baseQuantity || 1) : 1;
+                                  toggleIndividualItem(mealType, item.id, baseQty);
+                                } else {
+                                  toggleIndividualItem(mealType, item.id, 0);
+                                }
+                              }}
                               className={`px-3 py-2 rounded-lg text-sm font-medium transition-all whitespace-nowrap ${
                                 isSelected
                                   ? 'text-white'
@@ -428,6 +436,9 @@ export default function Planner() {
                               style={isSelected ? { backgroundColor: '#4f6d7a' } : {}}
                             >
                               {item.icon} {item.name}
+                              {item.hasBaseQuantity && !isSelected && (
+                                <span className="text-xs ml-1 opacity-75">({item.baseQuantity || 0}{item.unit || 'g'})</span>
+                              )}
                             </button>
                             {isSelected && (
                               <div className="flex items-center gap-1">
@@ -461,7 +472,15 @@ export default function Planner() {
                         return (
                           <div key={item.id} className="flex items-center gap-1">
                             <button
-                              onClick={() => toggleIndividualItem(mealType, item.id, isSelected ? 0 : 1)}
+                              onClick={() => {
+                                if (!isSelected) {
+                                  // Se tem valor base, usar ele, senão usar 1
+                                  const baseQty = item.hasBaseQuantity ? (item.baseQuantity || 1) : 1;
+                                  toggleIndividualItem(mealType, item.id, baseQty);
+                                } else {
+                                  toggleIndividualItem(mealType, item.id, 0);
+                                }
+                              }}
                               className={`px-3 py-2 rounded-lg text-sm font-medium transition-all whitespace-nowrap ${
                                 isSelected
                                   ? 'text-white'
@@ -470,6 +489,9 @@ export default function Planner() {
                               style={isSelected ? { backgroundColor: '#4f6d7a' } : {}}
                             >
                               {item.icon} {item.name}
+                              {item.hasBaseQuantity && !isSelected && (
+                                <span className="text-xs ml-1 opacity-75">({item.baseQuantity || 0}{item.unit || 'g'})</span>
+                              )}
                             </button>
                             {isSelected && (
                               <div className="flex items-center gap-1">
@@ -503,7 +525,15 @@ export default function Planner() {
                         return (
                           <div key={item.id} className="flex items-center gap-1">
                             <button
-                              onClick={() => toggleIndividualItem(mealType, item.id, isSelected ? 0 : 1)}
+                              onClick={() => {
+                                if (!isSelected) {
+                                  // Se tem valor base, usar ele, senão usar 1
+                                  const baseQty = item.hasBaseQuantity ? (item.baseQuantity || 1) : 1;
+                                  toggleIndividualItem(mealType, item.id, baseQty);
+                                } else {
+                                  toggleIndividualItem(mealType, item.id, 0);
+                                }
+                              }}
                               className={`px-3 py-2 rounded-lg text-sm font-medium transition-all whitespace-nowrap ${
                                 isSelected
                                   ? 'text-white'
@@ -512,6 +542,9 @@ export default function Planner() {
                               style={isSelected ? { backgroundColor: '#4f6d7a' } : {}}
                             >
                               {item.icon} {item.name}
+                              {item.hasBaseQuantity && !isSelected && (
+                                <span className="text-xs ml-1 opacity-75">({item.baseQuantity || 0}{item.unit || 'g'})</span>
+                              )}
                             </button>
                             {isSelected && (
                               <div className="flex items-center gap-1">
@@ -546,7 +579,15 @@ export default function Planner() {
                           return (
                             <div key={item.id} className="flex items-center gap-1">
                               <button
-                                onClick={() => toggleIndividualItem(mealType, item.id, isSelected ? 0 : 1)}
+                                onClick={() => {
+                                  if (!isSelected) {
+                                    // Se tem valor base, usar ele, senão usar 1
+                                    const baseQty = item.hasBaseQuantity ? (item.baseQuantity || 1) : 1;
+                                    toggleIndividualItem(mealType, item.id, baseQty);
+                                  } else {
+                                    toggleIndividualItem(mealType, item.id, 0);
+                                  }
+                                }}
                                 className={`px-3 py-2 rounded-lg text-sm font-medium transition-all whitespace-nowrap ${
                                   isSelected
                                     ? 'text-white'
@@ -555,6 +596,9 @@ export default function Planner() {
                                 style={isSelected ? { backgroundColor: '#4f6d7a' } : {}}
                               >
                                 {item.icon} {item.name}
+                                {item.hasBaseQuantity && !isSelected && (
+                                  <span className="text-xs ml-1 opacity-75">({item.baseQuantity || 0}{item.unit || 'g'})</span>
+                                )}
                               </button>
                               {isSelected && (
                                 <input
@@ -587,7 +631,15 @@ export default function Planner() {
                           return (
                             <div key={item.id} className="flex items-center gap-1">
                               <button
-                                onClick={() => toggleIndividualItem(mealType, item.id, isSelected ? 0 : 1)}
+                                onClick={() => {
+                                  if (!isSelected) {
+                                    // Se tem valor base, usar ele, senão usar 1
+                                    const baseQty = item.hasBaseQuantity ? (item.baseQuantity || 1) : 1;
+                                    toggleIndividualItem(mealType, item.id, baseQty);
+                                  } else {
+                                    toggleIndividualItem(mealType, item.id, 0);
+                                  }
+                                }}
                                 className={`px-3 py-2 rounded-lg text-sm font-medium transition-all whitespace-nowrap ${
                                   isSelected
                                     ? 'text-white'
@@ -596,6 +648,9 @@ export default function Planner() {
                                 style={isSelected ? { backgroundColor: '#4f6d7a' } : {}}
                               >
                                 {item.icon} {item.name}
+                                {item.hasBaseQuantity && !isSelected && (
+                                  <span className="text-xs ml-1 opacity-75">({item.baseQuantity || 0}{item.unit || 'g'})</span>
+                                )}
                               </button>
                               {isSelected && (
                                 <input

@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useStorage } from '../hooks/useStorage';
+import jsPDF from 'jspdf';
 
 // Conversão de carnes: cozido para cru (aproximadamente 30% de perda)
 const MEAT_CONVERSION = {
@@ -108,6 +109,18 @@ export default function GenerateShoppingList() {
     return item ? item.name : id;
   };
 
+  const getIngredientUnit = (id) => {
+    const allItems = [
+      ...(allIngredients.carbos || []),
+      ...(allIngredients.proteinas || []),
+      ...(allIngredients.saladas || []),
+      ...(allIngredients.frutas || []),
+      ...(allIngredients.adicionais || [])
+    ];
+    const item = allItems.find(i => i.id === id);
+    return item ? (item.unit || 'g') : 'g';
+  };
+
   const getIngredientGroup = (id) => {
     if (allIngredients.proteinas?.find(i => i.id === id)) return 'proteinas';
     if (allIngredients.carbos?.find(i => i.id === id)) return 'carbos';
@@ -121,7 +134,12 @@ export default function GenerateShoppingList() {
   Object.entries(shoppingList).forEach(([id, quantity]) => {
     const group = getIngredientGroup(id);
     if (!groupedList[group]) groupedList[group] = [];
-    groupedList[group].push({ id, name: getIngredientName(id), quantity });
+    groupedList[group].push({ 
+      id, 
+      name: getIngredientName(id), 
+      quantity,
+      unit: getIngredientUnit(id)
+    });
   });
 
   const groupLabels = {
@@ -131,6 +149,72 @@ export default function GenerateShoppingList() {
     frutas: 'Frutas',
     adicionais: 'Adicionais',
     outros: 'Outros'
+  };
+
+  const exportToPDF = () => {
+    const doc = new jsPDF();
+    const pageWidth = doc.internal.pageSize.getWidth();
+    const margin = 20;
+    let yPos = margin;
+    
+    // Título
+    doc.setFontSize(18);
+    doc.text('Lista de Compras', margin, yPos);
+    yPos += 10;
+    
+    // Período
+    if (startDate && endDate) {
+      doc.setFontSize(12);
+      doc.setTextColor(100, 100, 100);
+      const periodText = `Período: ${new Date(startDate).toLocaleDateString('pt-BR')} até ${new Date(endDate).toLocaleDateString('pt-BR')}`;
+      doc.text(periodText, margin, yPos);
+      yPos += 10;
+    }
+    
+    yPos += 5;
+    doc.setTextColor(0, 0, 0);
+    
+    // Grupos
+    Object.entries(groupLabels).forEach(([groupKey, groupLabel]) => {
+      const items = groupedList[groupKey] || [];
+      if (items.length === 0) return;
+      
+      // Verificar se precisa de nova página
+      if (yPos > 250) {
+        doc.addPage();
+        yPos = margin;
+      }
+      
+      // Título do grupo
+      doc.setFontSize(14);
+      doc.setFont(undefined, 'bold');
+      doc.text(groupLabel, margin, yPos);
+      yPos += 8;
+      
+      // Itens do grupo
+      doc.setFontSize(11);
+      doc.setFont(undefined, 'normal');
+      items.forEach(({ name, quantity, unit, id }) => {
+        if (yPos > 280) {
+          doc.addPage();
+          yPos = margin;
+        }
+        
+        const isMeat = MEAT_CONVERSION[id] && MEAT_CONVERSION[id] > 1;
+        const quantityText = `${quantity.toFixed(1)}${unit}${isMeat ? ' (cru)' : ''}`;
+        const itemText = `• ${name}`;
+        
+        doc.text(itemText, margin + 5, yPos);
+        doc.text(quantityText, pageWidth - margin - 30, yPos, { align: 'right' });
+        yPos += 7;
+      });
+      
+      yPos += 5; // Espaço entre grupos
+    });
+    
+    // Salvar PDF
+    const fileName = `lista-compras-${startDate || 'inicio'}-${endDate || 'fim'}.pdf`;
+    doc.save(fileName);
   };
 
   return (
@@ -188,6 +272,17 @@ export default function GenerateShoppingList() {
       {/* Lista gerada */}
       {Object.keys(shoppingList).length > 0 && (
         <div className="space-y-4">
+          <div className="flex justify-end mb-2">
+            <button
+              onClick={exportToPDF}
+              className="px-4 py-2 text-white rounded-lg font-medium flex items-center gap-2"
+              style={{ backgroundColor: '#4f6d7a' }}
+              onMouseEnter={(e) => e.target.style.backgroundColor = '#dd6e42'}
+              onMouseLeave={(e) => e.target.style.backgroundColor = '#4f6d7a'}
+            >
+              📄 Exportar PDF
+            </button>
+          </div>
           {Object.entries(groupLabels).map(([groupKey, groupLabel]) => {
             const items = groupedList[groupKey] || [];
             if (items.length === 0) return null;
@@ -196,13 +291,13 @@ export default function GenerateShoppingList() {
               <div key={groupKey} className="bg-white rounded-lg shadow p-4">
                 <h2 className="text-lg font-semibold mb-3">{groupLabel}</h2>
                 <div className="space-y-2">
-                  {items.map(({ id, name, quantity }) => {
+                  {items.map(({ id, name, quantity, unit }) => {
                     const isMeat = MEAT_CONVERSION[id] && MEAT_CONVERSION[id] > 1;
                     return (
                       <div key={id} className="flex items-center justify-between p-2 bg-gray-50 rounded">
                         <span className="font-medium">{name}</span>
                         <div className="text-right">
-                          <span className="font-bold">{quantity.toFixed(1)}</span>
+                          <span className="font-bold">{quantity.toFixed(1)}{unit}</span>
                           {isMeat && (
                             <span className="text-xs text-gray-500 ml-1">(cru)</span>
                           )}
