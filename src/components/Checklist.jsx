@@ -177,11 +177,10 @@ export default function Checklist() {
                     <span className="font-bold">{week.weeklyPercentage}%</span>
                   </div>
                   <div className="w-full rounded-full h-2" style={{ backgroundColor: '#eaeaea' }}>
-                    <div
-                      className="h-2 rounded-full"
-                      style={{ backgroundColor: '#4f6d7a' }}
-                      style={{ width: `${week.weeklyPercentage}%` }}
-                    ></div>
+                      <div
+                        className="h-2 rounded-full"
+                        style={{ backgroundColor: '#4f6d7a', width: `${week.weeklyPercentage}%` }}
+                      ></div>
                   </div>
                 </div>
                 <div className="grid grid-cols-7 gap-1 mt-3">

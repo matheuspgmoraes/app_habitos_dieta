@@ -45,6 +45,7 @@ export default function Planner() {
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
   const [mealMode, setMealMode] = useState({}); // { mealType: 'recipe' | 'individual' }
   const processedDatesRef = useRef(new Set()); // Rastrear datas já processadas
+  const [error, setError] = useState(null);
 
   // Pré-marcar atividades baseadas em daysOfWeek (apenas uma vez quando o dia é selecionado)
   // IMPORTANTE: Este useEffect deve estar ANTES de qualquer return condicional
@@ -123,7 +124,27 @@ export default function Planner() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedDate]);
 
-  if (!data) return <div className="p-4">Carregando...</div>;
+  if (error) {
+    return (
+      <div className="p-4">
+        <h2 className="text-xl font-bold text-red-600 mb-2">Erro no Planner</h2>
+        <p className="text-gray-700 mb-4">{error}</p>
+        <button
+          onClick={() => {
+            setError(null);
+            window.location.reload();
+          }}
+          className="px-4 py-2 bg-[#4f6d7a] text-white rounded-lg"
+        >
+          Recarregar Página
+        </button>
+      </div>
+    );
+  }
+
+  if (!data) {
+    return <div className="p-4">Carregando...</div>;
+  }
 
   // Garantir que planner existe e é um array
   if (!data.planner) {
@@ -131,8 +152,10 @@ export default function Planner() {
     try {
       const updated = { ...data, planner: [] };
       updateData(updated);
-    } catch (error) {
-      console.error('Erro ao inicializar planner:', error);
+    } catch (err) {
+      console.error('Erro ao inicializar planner:', err);
+      setError('Erro ao inicializar planner: ' + err.message);
+      return null;
     }
   }
   
@@ -141,10 +164,11 @@ export default function Planner() {
     try {
       const updated = { ...data, planner: [] };
       updateData(updated);
-    } catch (error) {
-      console.error('Erro ao corrigir planner:', error);
+    } catch (err) {
+      console.error('Erro ao corrigir planner:', err);
+      setError('Erro ao corrigir planner: ' + err.message);
+      return null;
     }
-    return <div className="p-4">Erro: Planner não inicializado. Recarregue a página.</div>;
   }
 
   // Usar ingredientes do storage ou padrão
@@ -240,8 +264,12 @@ export default function Planner() {
   let selectedDay;
   try {
     selectedDay = getOrCreateDay(selectedDate);
-  } catch (error) {
-    console.error('Erro ao obter dia selecionado:', error);
+    if (!selectedDay || !selectedDay.meals) {
+      throw new Error('Dia selecionado inválido');
+    }
+  } catch (err) {
+    console.error('Erro ao obter dia selecionado:', err);
+    setError('Erro ao obter dia selecionado: ' + err.message);
     selectedDay = {
       date: selectedDate,
       meals: {
@@ -256,9 +284,17 @@ export default function Planner() {
     };
   }
   
-  const dayOfWeek = new Date(selectedDate).getDay();
-  const isWork = isWorkDay(selectedDate);
-  const dayActivities = selectedDay?.activities || [];
+  let dayOfWeek, isWork, dayActivities;
+  try {
+    dayOfWeek = new Date(selectedDate).getDay();
+    isWork = isWorkDay(selectedDate);
+    dayActivities = selectedDay?.activities || [];
+  } catch (err) {
+    console.error('Erro ao calcular dia da semana:', err);
+    dayOfWeek = 0;
+    isWork = false;
+    dayActivities = [];
+  }
 
   const handleActivityToggle = (activityId) => {
     const updated = { ...data };
