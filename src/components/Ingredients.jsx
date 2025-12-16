@@ -262,7 +262,7 @@ export default function Ingredients() {
                             onChange={(e) => handleEditIngredient(groupKey, idx, { hasBaseQuantity: e.target.checked })}
                             className="w-4 h-4"
                           />
-                          <span className="text-xs text-gray-600">Base</span>
+                          <span className="text-xs text-gray-600">Qtd pré-definida</span>
                         </div>
                         {displayIngredient.hasBaseQuantity && (
                           <input
@@ -273,6 +273,18 @@ export default function Ingredients() {
                             className="w-16 px-1 py-1 border border-gray-300 rounded text-xs text-center"
                             min="0"
                             step="0.1"
+                            inputMode="decimal"
+                            onFocus={(e) => {
+                              // Prevenir zoom no iOS
+                              if (window.visualViewport) {
+                                e.target.style.fontSize = '16px';
+                              }
+                            }}
+                            onBlur={(e) => {
+                              if (window.visualViewport) {
+                                e.target.style.fontSize = '';
+                              }
+                            }}
                           />
                         )}
                         <button
@@ -292,7 +304,7 @@ export default function Ingredients() {
                         <span className="text-xs text-gray-500 flex-shrink-0">({ingredient.unit || 'g'})</span>
                         {ingredient.hasBaseQuantity && (
                           <span className="text-xs text-gray-600 flex-shrink-0 px-1 py-0.5 rounded" style={{ backgroundColor: '#c0d6df' }}>
-                            Base: {ingredient.baseQuantity || 0}{ingredient.unit || 'g'}
+                            Qtd pré-definida: {ingredient.baseQuantity || 0}{ingredient.unit || 'g'}
                           </span>
                         )}
                         <button

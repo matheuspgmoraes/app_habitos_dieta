@@ -171,8 +171,31 @@ export default function Planner() {
     }
   }
 
-  // Usar ingredientes do storage ou padrão
-  const individualItems = data.ingredients || DEFAULT_INGREDIENTS;
+  // Usar ingredientes do storage ou padrão - normalizar para garantir estrutura correta
+  const normalizeIngredients = (ingredients) => {
+    if (!ingredients) return DEFAULT_INGREDIENTS;
+    
+    const normalized = {};
+    const groups = ['carbos', 'proteinas', 'saladas', 'frutas', 'adicionais', 'outros'];
+    
+    groups.forEach(group => {
+      normalized[group] = (ingredients[group] || []).map(item => {
+        if (!item || typeof item !== 'object') return null;
+        return {
+          id: item.id || '',
+          name: item.name || '',
+          icon: item.icon || '📝',
+          unit: item.unit || 'g',
+          hasBaseQuantity: Boolean(item.hasBaseQuantity),
+          baseQuantity: typeof item.baseQuantity === 'number' && !isNaN(item.baseQuantity) ? item.baseQuantity : undefined
+        };
+      }).filter(item => item && item.id);
+    });
+    
+    return normalized;
+  };
+  
+  const individualItems = normalizeIngredients(data.ingredients) || DEFAULT_INGREDIENTS;
 
   // Últimos 7 dias + próximos 7 dias (14 dias total)
   const today = new Date();
@@ -391,35 +414,83 @@ export default function Planner() {
 
   // Salvar refeição como receita
   const handleRecipeSelect = (mealType, recipeId) => {
-    const recipe = data.recipes.find(r => r.id === recipeId);
-    const mealData = {
-      time: mealTimes[mealType],
-      recipeId: recipeId,
-      recipeName: recipe?.name || '',
-      items: null
-    };
-    // updatePlanner já cria o dia se não existir
-    updatePlanner(selectedDate, mealType, mealData);
-    setMealMode({ ...mealMode, [mealType]: 'recipe' });
+    try {
+      if (!recipeId) {
+        // Se não tem receita selecionada, limpar
+        const mealData = {
+          time: mealTimes[mealType],
+          recipeId: null,
+          recipeName: null,
+          items: []
+        };
+        updatePlanner(selectedDate, mealType, mealData);
+        setMealMode({ ...mealMode, [mealType]: null });
+        return;
+      }
+      
+      const recipe = data.recipes?.find(r => r.id === recipeId);
+      if (!recipe) {
+        console.error('Receita não encontrada:', recipeId);
+        return;
+      }
+      
+      const mealData = {
+        time: mealTimes[mealType],
+        recipeId: recipeId,
+        recipeName: recipe.name || '',
+        items: null
+      };
+      // updatePlanner já cria o dia se não existir
+      updatePlanner(selectedDate, mealType, mealData);
+      setMealMode({ ...mealMode, [mealType]: 'recipe' });
+    } catch (error) {
+      console.error('Erro ao selecionar receita:', error);
+      setError('Erro ao selecionar receita: ' + error.message);
+    }
   };
 
   // Salvar refeição com itens individuais
   const handleItemsSelect = (mealType, selectedItems) => {
-    const mealData = {
-      time: mealTimes[mealType],
-      recipeId: null,
-      recipeName: null,
-      items: selectedItems // Array de objetos { id, quantity }
-    };
-    // updatePlanner já cria o dia se não existir
-    updatePlanner(selectedDate, mealType, mealData);
-    setMealMode({ ...mealMode, [mealType]: 'individual' });
+    try {
+      if (!Array.isArray(selectedItems)) {
+        console.error('selectedItems deve ser um array:', selectedItems);
+        return;
+      }
+      
+      const mealData = {
+        time: mealTimes[mealType],
+        recipeId: null,
+        recipeName: null,
+        items: selectedItems // Array de objetos { id, quantity }
+      };
+      // updatePlanner já cria o dia se não existir
+      updatePlanner(selectedDate, mealType, mealData);
+      setMealMode({ ...mealMode, [mealType]: 'individual' });
+    } catch (error) {
+      console.error('Erro ao selecionar itens:', error);
+      setError('Erro ao selecionar itens: ' + error.message);
+    }
   };
 
   // Toggle item individual ou atualizar quantidade
   const toggleIndividualItem = (mealType, itemId, quantity = 1) => {
     try {
-      const meal = selectedDay?.meals?.[mealType] || { items: [] };
+      if (!mealType || !itemId) {
+        console.error('Parâmetros inválidos:', { mealType, itemId });
+        return;
+      }
+      
+      if (!selectedDay || !selectedDay.meals) {
+        console.error('selectedDay inválido:', selectedDay);
+        return;
+      }
+      
+      const meal = selectedDay.meals[mealType];
+      if (!meal) {
+        console.error('Refeição não encontrada:', mealType);
+        return;
+      }
+      
       const currentItems = meal.items || [];
       
       // Converter formato antigo (array de strings) para novo (array de objetos)
@@ -461,7 +532,7 @@ export default function Planner() {
       handleItemsSelect(mealType, newItems);
     } catch (error) {
       console.error('Erro ao toggle item:', error);
-      // Não fazer nada em caso de erro para evitar quebrar a página
+      setError('Erro ao adicionar ingrediente: ' + error.message);
     }
   };
 
@@ -606,148 +677,31 @@ export default function Planner() {
                   <div>
                     <h4 className="text-xs font-semibold text-gray-600 mb-2">Proteínas</h4>
                     <div className="flex flex-wrap gap-2">
-                      {individualItems.proteinas.map(item => {
+                      {(individualItems.proteinas || []).map(item => {
+                        if (!item || !item.id) return null;
+                        
+                        try {
                         const isSelected = selectedItemsMap.has(item.id);
                         const savedQuantity = isSelected ? selectedItemsMap.get(item.id) : null;
-                        const displayQuantity = savedQuantity !== null && savedQuantity !== undefined 
-                          ? savedQuantity 
-                          : (isSelected && item.hasBaseQuantity ? parseFloat(item.baseQuantity) : null);
-                        return (
-                          <div key={item.id} className="flex items-center gap-1">
-                            <button
-                              onClick={() => {
-                                if (!isSelected) {
-                                  const baseQty = item.hasBaseQuantity ? parseFloat(item.baseQuantity) || 1 : 1;
-                                  toggleIndividualItem(mealType, item.id, baseQty);
-                                } else {
-                                  toggleIndividualItem(mealType, item.id, 0);
-                                }
-                              }}
-                              className={`px-3 py-2 rounded-lg text-sm font-medium transition-all whitespace-nowrap ${
-                                isSelected
-                                  ? 'text-white'
-                                  : 'bg-[#eaeaea] text-gray-700 hover:bg-[#c0d6df]'
-                              }`}
-                              style={isSelected ? { backgroundColor: '#4f6d7a' } : {}}
-                            >
-                              {item.icon} {item.name}
-                              {item.hasBaseQuantity && !isSelected && (
-                                <span className="text-xs ml-1 opacity-75">({item.baseQuantity || 0}{item.unit || 'g'})</span>
-                              )}
-                            </button>
-                            {isSelected && (
-                              <div className="flex items-center gap-1">
-                                <input
-                                  type="number"
-                                  min="0.1"
-                                  step="0.1"
-                                  value={savedQuantity !== null && savedQuantity !== undefined ? savedQuantity : (item.hasBaseQuantity ? parseFloat(item.baseQuantity) || 1 : 1)}
-                                  onChange={(e) => {
-                                    const inputValue = e.target.value;
-                                    if (inputValue === '' || inputValue === '0') {
-                                      toggleIndividualItem(mealType, item.id, 0);
-                                    } else {
-                                      const newQty = parseFloat(inputValue);
-                                      if (!isNaN(newQty) && newQty > 0) {
-                                        toggleIndividualItem(mealType, item.id, newQty);
-                                      }
-                                    }
-                                  }}
-                                  onClick={(e) => e.stopPropagation()}
-                                  className="w-16 px-1 py-1 border border-gray-300 rounded text-center text-sm"
-                                />
-                                <span className="text-xs text-gray-500">{item.unit || 'g'}</span>
-                              </div>
-                            )}
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </div>
-
-                  {/* Saladas */}
-                  <div>
-                    <h4 className="text-xs font-semibold text-gray-600 mb-2">Saladas</h4>
-                    <div className="flex flex-wrap gap-2">
-                      {individualItems.saladas.map(item => {
-                        const isSelected = selectedItemsMap.has(item.id);
-                        const savedQuantity = isSelected ? selectedItemsMap.get(item.id) : null;
-                        const displayQuantity = savedQuantity !== null && savedQuantity !== undefined 
-                          ? savedQuantity 
-                          : (isSelected && item.hasBaseQuantity ? parseFloat(item.baseQuantity) : null);
-                        return (
-                          <div key={item.id} className="flex items-center gap-1">
-                            <button
-                              onClick={() => {
-                                if (!isSelected) {
-                                  const baseQty = item.hasBaseQuantity ? parseFloat(item.baseQuantity) || 1 : 1;
-                                  toggleIndividualItem(mealType, item.id, baseQty);
-                                } else {
-                                  toggleIndividualItem(mealType, item.id, 0);
-                                }
-                              }}
-                              className={`px-3 py-2 rounded-lg text-sm font-medium transition-all whitespace-nowrap ${
-                                isSelected
-                                  ? 'text-white'
-                                  : 'bg-[#eaeaea] text-gray-700 hover:bg-[#c0d6df]'
-                              }`}
-                              style={isSelected ? { backgroundColor: '#4f6d7a' } : {}}
-                            >
-                              {item.icon} {item.name}
-                              {item.hasBaseQuantity && !isSelected && (
-                                <span className="text-xs ml-1 opacity-75">({item.baseQuantity || 0}{item.unit || 'g'})</span>
-                              )}
-                            </button>
-                            {isSelected && (
-                              <div className="flex items-center gap-1">
-                                <input
-                                  type="number"
-                                  min="0.1"
-                                  step="0.1"
-                                  value={savedQuantity !== null && savedQuantity !== undefined ? savedQuantity : (item.hasBaseQuantity ? parseFloat(item.baseQuantity) || 1 : 1)}
-                                  onChange={(e) => {
-                                    const inputValue = e.target.value;
-                                    if (inputValue === '' || inputValue === '0') {
-                                      toggleIndividualItem(mealType, item.id, 0);
-                                    } else {
-                                      const newQty = parseFloat(inputValue);
-                                      if (!isNaN(newQty) && newQty > 0) {
-                                        toggleIndividualItem(mealType, item.id, newQty);
-                                      }
-                                    }
-                                  }}
-                                  onClick={(e) => e.stopPropagation()}
-                                  className="w-16 px-1 py-1 border border-gray-300 rounded text-center text-sm"
-                                />
-                                <span className="text-xs text-gray-500">{item.unit || 'g'}</span>
-                              </div>
-                            )}
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </div>
-
-                  {/* Frutas (especialmente para lanches) */}
-                  {(mealType === 'lancheManha' || mealType === 'lancheTarde') && (
-                    <div>
-                      <h4 className="text-xs font-semibold text-gray-600 mb-2">Frutas</h4>
-                      <div className="flex flex-wrap gap-2">
-                        {individualItems.frutas.map(item => {
-                          const isSelected = selectedItemsMap.has(item.id);
-                          const savedQuantity = isSelected ? selectedItemsMap.get(item.id) : null;
+                          const hasBase = Boolean(item.hasBaseQuantity);
+                          const baseQty = hasBase && typeof item.baseQuantity === 'number' ? item.baseQuantity : undefined;
                           const displayQuantity = savedQuantity !== null && savedQuantity !== undefined 
                             ? savedQuantity 
-                            : (isSelected && item.hasBaseQuantity ? parseFloat(item.baseQuantity) : null);
+                            : (isSelected && hasBase && baseQty ? baseQty : 1);
+                          
                           return (
                             <div key={item.id} className="flex items-center gap-1">
                               <button
                                 onClick={() => {
-                                  if (!isSelected) {
-                                    const baseQty = item.hasBaseQuantity ? parseFloat(item.baseQuantity) || 1 : 1;
-                                    toggleIndividualItem(mealType, item.id, baseQty);
-                                  } else {
-                                    toggleIndividualItem(mealType, item.id, 0);
+                                  try {
+                                    if (!isSelected) {
+                                      const qtyToUse = (hasBase && baseQty) ? baseQty : 1;
+                                      toggleIndividualItem(mealType, item.id, qtyToUse);
+                                    } else {
+                                      toggleIndividualItem(mealType, item.id, 0);
+                                    }
+                                  } catch (err) {
+                                    console.error('Erro ao clicar no item:', err);
                                   }
                                 }}
                                 className={`px-3 py-2 rounded-lg text-sm font-medium transition-all whitespace-nowrap ${
@@ -757,9 +711,9 @@ export default function Planner() {
                                 }`}
                                 style={isSelected ? { backgroundColor: '#4f6d7a' } : {}}
                               >
-                                {item.icon} {item.name}
-                                {item.hasBaseQuantity && !isSelected && (
-                                  <span className="text-xs ml-1 opacity-75">({item.baseQuantity || 0}{item.unit || 'g'})</span>
+                                {item.icon || '📝'} {item.name || 'Sem nome'}
+                                {hasBase && !isSelected && baseQty !== undefined && (
+                                  <span className="text-xs ml-1 opacity-75">({baseQty}{item.unit || 'g'})</span>
                                 )}
                               </button>
                               {isSelected && (
@@ -768,16 +722,20 @@ export default function Planner() {
                                     type="number"
                                     min="0.1"
                                     step="0.1"
-                                    value={displayQuantity !== null && displayQuantity !== undefined ? displayQuantity : (item.hasBaseQuantity ? parseFloat(item.baseQuantity) || 1 : 1)}
+                                    value={displayQuantity || 1}
                                     onChange={(e) => {
-                                      const inputValue = e.target.value;
-                                      if (inputValue === '' || inputValue === '0') {
-                                        toggleIndividualItem(mealType, item.id, 0);
-                                      } else {
-                                        const newQty = parseFloat(inputValue);
-                                        if (!isNaN(newQty) && newQty > 0) {
-                                          toggleIndividualItem(mealType, item.id, newQty);
+                                      try {
+                                        const inputValue = e.target.value;
+                                        if (inputValue === '' || inputValue === '0') {
+                                          toggleIndividualItem(mealType, item.id, 0);
+                                        } else {
+                                          const newQty = parseFloat(inputValue);
+                                          if (!isNaN(newQty) && newQty > 0) {
+                                            toggleIndividualItem(mealType, item.id, newQty);
+                                          }
                                         }
+                                      } catch (err) {
+                                        console.error('Erro ao alterar quantidade:', err);
                                       }
                                     }}
                                     onClick={(e) => e.stopPropagation()}
@@ -788,6 +746,173 @@ export default function Planner() {
                               )}
                             </div>
                           );
+                        } catch (err) {
+                          console.error('Erro ao renderizar item:', item, err);
+                          return null;
+                        }
+                      })}
+                    </div>
+                  </div>
+
+                  {/* Saladas */}
+                  <div>
+                    <h4 className="text-xs font-semibold text-gray-600 mb-2">Saladas</h4>
+                    <div className="flex flex-wrap gap-2">
+                      {(individualItems.saladas || []).map(item => {
+                        if (!item || !item.id) return null;
+                        
+                        try {
+                          const isSelected = selectedItemsMap.has(item.id);
+                          const savedQuantity = isSelected ? selectedItemsMap.get(item.id) : null;
+                          const hasBase = Boolean(item.hasBaseQuantity);
+                          const baseQty = hasBase && typeof item.baseQuantity === 'number' ? item.baseQuantity : undefined;
+                          const displayQuantity = savedQuantity !== null && savedQuantity !== undefined 
+                            ? savedQuantity 
+                            : (isSelected && hasBase && baseQty ? baseQty : 1);
+                          
+                          return (
+                            <div key={item.id} className="flex items-center gap-1">
+                              <button
+                                onClick={() => {
+                                  try {
+                                    if (!isSelected) {
+                                      const qtyToUse = (hasBase && baseQty) ? baseQty : 1;
+                                      toggleIndividualItem(mealType, item.id, qtyToUse);
+                                    } else {
+                                      toggleIndividualItem(mealType, item.id, 0);
+                                    }
+                                  } catch (err) {
+                                    console.error('Erro ao clicar no item:', err);
+                                  }
+                                }}
+                                className={`px-3 py-2 rounded-lg text-sm font-medium transition-all whitespace-nowrap ${
+                                  isSelected
+                                    ? 'text-white'
+                                    : 'bg-[#eaeaea] text-gray-700 hover:bg-[#c0d6df]'
+                                }`}
+                                style={isSelected ? { backgroundColor: '#4f6d7a' } : {}}
+                              >
+                                {item.icon || '📝'} {item.name || 'Sem nome'}
+                                {hasBase && !isSelected && baseQty !== undefined && (
+                                  <span className="text-xs ml-1 opacity-75">({baseQty}{item.unit || 'g'})</span>
+                                )}
+                              </button>
+                              {isSelected && (
+                                <div className="flex items-center gap-1">
+                                  <input
+                                    type="number"
+                                    min="0.1"
+                                    step="0.1"
+                                    value={displayQuantity || 1}
+                                    onChange={(e) => {
+                                      try {
+                                        const inputValue = e.target.value;
+                                        if (inputValue === '' || inputValue === '0') {
+                                          toggleIndividualItem(mealType, item.id, 0);
+                                        } else {
+                                          const newQty = parseFloat(inputValue);
+                                          if (!isNaN(newQty) && newQty > 0) {
+                                            toggleIndividualItem(mealType, item.id, newQty);
+                                          }
+                                        }
+                                      } catch (err) {
+                                        console.error('Erro ao alterar quantidade:', err);
+                                      }
+                                    }}
+                                    onClick={(e) => e.stopPropagation()}
+                                    className="w-16 px-1 py-1 border border-gray-300 rounded text-center text-sm"
+                                  />
+                                  <span className="text-xs text-gray-500">{item.unit || 'g'}</span>
+                                </div>
+                              )}
+                            </div>
+                          );
+                        } catch (err) {
+                          console.error('Erro ao renderizar item:', item, err);
+                          return null;
+                        }
+                      })}
+                    </div>
+                  </div>
+
+                  {/* Frutas (especialmente para lanches) */}
+                  {(mealType === 'lancheManha' || mealType === 'lancheTarde') && (
+                    <div>
+                      <h4 className="text-xs font-semibold text-gray-600 mb-2">Frutas</h4>
+                      <div className="flex flex-wrap gap-2">
+                        {(individualItems.frutas || []).map(item => {
+                          if (!item || !item.id) return null;
+                          
+                          try {
+                            const isSelected = selectedItemsMap.has(item.id);
+                            const savedQuantity = isSelected ? selectedItemsMap.get(item.id) : null;
+                            const hasBase = Boolean(item.hasBaseQuantity);
+                            const baseQty = hasBase && typeof item.baseQuantity === 'number' ? item.baseQuantity : undefined;
+                            const displayQuantity = savedQuantity !== null && savedQuantity !== undefined 
+                              ? savedQuantity 
+                              : (isSelected && hasBase && baseQty ? baseQty : 1);
+                            
+                            return (
+                              <div key={item.id} className="flex items-center gap-1">
+                                <button
+                                  onClick={() => {
+                                    try {
+                                      if (!isSelected) {
+                                        const qtyToUse = (hasBase && baseQty) ? baseQty : 1;
+                                        toggleIndividualItem(mealType, item.id, qtyToUse);
+                                      } else {
+                                        toggleIndividualItem(mealType, item.id, 0);
+                                      }
+                                    } catch (err) {
+                                      console.error('Erro ao clicar no item:', err);
+                                    }
+                                  }}
+                                  className={`px-3 py-2 rounded-lg text-sm font-medium transition-all whitespace-nowrap ${
+                                    isSelected
+                                      ? 'text-white'
+                                      : 'bg-[#eaeaea] text-gray-700 hover:bg-[#c0d6df]'
+                                  }`}
+                                  style={isSelected ? { backgroundColor: '#4f6d7a' } : {}}
+                                >
+                                  {item.icon || '📝'} {item.name || 'Sem nome'}
+                                  {hasBase && !isSelected && baseQty !== undefined && (
+                                    <span className="text-xs ml-1 opacity-75">({baseQty}{item.unit || 'g'})</span>
+                                  )}
+                                </button>
+                                {isSelected && (
+                                  <div className="flex items-center gap-1">
+                                    <input
+                                      type="number"
+                                      min="0.1"
+                                      step="0.1"
+                                      value={displayQuantity || 1}
+                                      onChange={(e) => {
+                                        try {
+                                          const inputValue = e.target.value;
+                                          if (inputValue === '' || inputValue === '0') {
+                                            toggleIndividualItem(mealType, item.id, 0);
+                                          } else {
+                                            const newQty = parseFloat(inputValue);
+                                            if (!isNaN(newQty) && newQty > 0) {
+                                              toggleIndividualItem(mealType, item.id, newQty);
+                                            }
+                                          }
+                                        } catch (err) {
+                                          console.error('Erro ao alterar quantidade:', err);
+                                        }
+                                      }}
+                                      onClick={(e) => e.stopPropagation()}
+                                      className="w-16 px-1 py-1 border border-gray-300 rounded text-center text-sm"
+                                    />
+                                    <span className="text-xs text-gray-500">{item.unit || 'g'}</span>
+                                  </div>
+                                )}
+                              </div>
+                            );
+                          } catch (err) {
+                            console.error('Erro ao renderizar item:', item, err);
+                            return null;
+                          }
                         })}
                       </div>
                     </div>
@@ -798,61 +923,79 @@ export default function Planner() {
                     <div>
                       <h4 className="text-xs font-semibold text-gray-600 mb-2">Outros</h4>
                       <div className="flex flex-wrap gap-2">
-                        {individualItems.outros.map(item => {
-                          const isSelected = selectedItemsMap.has(item.id);
-                          const savedQuantity = isSelected ? selectedItemsMap.get(item.id) : null;
-                          const displayQuantity = savedQuantity !== null && savedQuantity !== undefined 
-                            ? savedQuantity 
-                            : (isSelected && item.hasBaseQuantity ? parseFloat(item.baseQuantity) : null);
-                          return (
-                            <div key={item.id} className="flex items-center gap-1">
-                              <button
-                                onClick={() => {
-                                  if (!isSelected) {
-                                    const baseQty = item.hasBaseQuantity ? parseFloat(item.baseQuantity) || 1 : 1;
-                                    toggleIndividualItem(mealType, item.id, baseQty);
-                                  } else {
-                                    toggleIndividualItem(mealType, item.id, 0);
-                                  }
-                                }}
-                                className={`px-3 py-2 rounded-lg text-sm font-medium transition-all whitespace-nowrap ${
-                                  isSelected
-                                    ? 'text-white'
-                                    : 'bg-[#eaeaea] text-gray-700 hover:bg-[#c0d6df]'
-                                }`}
-                                style={isSelected ? { backgroundColor: '#4f6d7a' } : {}}
-                              >
-                                {item.icon} {item.name}
-                                {item.hasBaseQuantity && !isSelected && (
-                                  <span className="text-xs ml-1 opacity-75">({item.baseQuantity || 0}{item.unit || 'g'})</span>
-                                )}
-                              </button>
-                              {isSelected && (
-                                <div className="flex items-center gap-1">
-                                  <input
-                                    type="number"
-                                    min="0.1"
-                                    step="0.1"
-                                    value={displayQuantity !== null && displayQuantity !== undefined ? displayQuantity : (item.hasBaseQuantity ? parseFloat(item.baseQuantity) || 1 : 1)}
-                                    onChange={(e) => {
-                                      const inputValue = e.target.value;
-                                      if (inputValue === '' || inputValue === '0') {
-                                        toggleIndividualItem(mealType, item.id, 0);
+                        {(individualItems.outros || []).map(item => {
+                          if (!item || !item.id) return null;
+                          
+                          try {
+                            const isSelected = selectedItemsMap.has(item.id);
+                            const savedQuantity = isSelected ? selectedItemsMap.get(item.id) : null;
+                            const hasBase = Boolean(item.hasBaseQuantity);
+                            const baseQty = hasBase && typeof item.baseQuantity === 'number' ? item.baseQuantity : undefined;
+                            const displayQuantity = savedQuantity !== null && savedQuantity !== undefined 
+                              ? savedQuantity 
+                              : (isSelected && hasBase && baseQty ? baseQty : 1);
+                            
+                            return (
+                              <div key={item.id} className="flex items-center gap-1">
+                                <button
+                                  onClick={() => {
+                                    try {
+                                      if (!isSelected) {
+                                        const qtyToUse = (hasBase && baseQty) ? baseQty : 1;
+                                        toggleIndividualItem(mealType, item.id, qtyToUse);
                                       } else {
-                                        const newQty = parseFloat(inputValue);
-                                        if (!isNaN(newQty) && newQty > 0) {
-                                          toggleIndividualItem(mealType, item.id, newQty);
-                                        }
+                                        toggleIndividualItem(mealType, item.id, 0);
                                       }
-                                    }}
-                                    onClick={(e) => e.stopPropagation()}
-                                    className="w-16 px-1 py-1 border border-gray-300 rounded text-center text-sm"
-                                  />
-                                  <span className="text-xs text-gray-500">{item.unit || 'g'}</span>
-                                </div>
-                              )}
-                            </div>
-                          );
+                                    } catch (err) {
+                                      console.error('Erro ao clicar no item:', err);
+                                    }
+                                  }}
+                                  className={`px-3 py-2 rounded-lg text-sm font-medium transition-all whitespace-nowrap ${
+                                    isSelected
+                                      ? 'text-white'
+                                      : 'bg-[#eaeaea] text-gray-700 hover:bg-[#c0d6df]'
+                                  }`}
+                                  style={isSelected ? { backgroundColor: '#4f6d7a' } : {}}
+                                >
+                                  {item.icon || '📝'} {item.name || 'Sem nome'}
+                                  {hasBase && !isSelected && baseQty !== undefined && (
+                                    <span className="text-xs ml-1 opacity-75">({baseQty}{item.unit || 'g'})</span>
+                                  )}
+                                </button>
+                                {isSelected && (
+                                  <div className="flex items-center gap-1">
+                                    <input
+                                      type="number"
+                                      min="0.1"
+                                      step="0.1"
+                                      value={displayQuantity || 1}
+                                      onChange={(e) => {
+                                        try {
+                                          const inputValue = e.target.value;
+                                          if (inputValue === '' || inputValue === '0') {
+                                            toggleIndividualItem(mealType, item.id, 0);
+                                          } else {
+                                            const newQty = parseFloat(inputValue);
+                                            if (!isNaN(newQty) && newQty > 0) {
+                                              toggleIndividualItem(mealType, item.id, newQty);
+                                            }
+                                          }
+                                        } catch (err) {
+                                          console.error('Erro ao alterar quantidade:', err);
+                                        }
+                                      }}
+                                      onClick={(e) => e.stopPropagation()}
+                                      className="w-16 px-1 py-1 border border-gray-300 rounded text-center text-sm"
+                                    />
+                                    <span className="text-xs text-gray-500">{item.unit || 'g'}</span>
+                                  </div>
+                                )}
+                              </div>
+                            );
+                          } catch (err) {
+                            console.error('Erro ao renderizar item:', item, err);
+                            return null;
+                          }
                         })}
                       </div>
                     </div>
