@@ -6,12 +6,12 @@ import WeeklyPrep from './WeeklyPrep';
 import GenerateShoppingList from './GenerateShoppingList';
 
 export default function RecipesAndMore() {
-  const [activeSection, setActiveSection] = useState('recipes');
+  const [activeSection, setActiveSection] = useState('ingredients');
 
   const sections = [
-    { id: 'recipes', label: 'Receitas', component: Recipes },
     { id: 'ingredients', label: 'Ingredientes', component: Ingredients },
-    { id: 'prep', label: 'Preparo', component: WeeklyPrep },
+    { id: 'recipes', label: 'Receitas', component: Recipes },
+    { id: 'prep', label: 'Planejamento', component: WeeklyPrep },
     { id: 'shopping', label: 'Compras', component: ShoppingList },
     { id: 'generate', label: 'Gerar Lista', component: GenerateShoppingList }
   ];

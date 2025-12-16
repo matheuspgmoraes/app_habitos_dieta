@@ -17,6 +17,7 @@ export default function GenerateShoppingList() {
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
   const [shoppingList, setShoppingList] = useState({});
+  const [checkedItems, setCheckedItems] = useState({});
 
   if (!data) return <div className="p-4">Carregando...</div>;
 
@@ -87,7 +88,22 @@ export default function GenerateShoppingList() {
     });
 
     setShoppingList(ingredients);
+    // Resetar itens marcados quando gerar nova lista
+    setCheckedItems({});
   };
+
+  const handleToggleItem = (id) => {
+    setCheckedItems(prev => ({
+      ...prev,
+      [id]: !prev[id]
+    }));
+  };
+
+  const clearCheckedItems = () => {
+    setCheckedItems({});
+  };
+
+  const hasCheckedItems = Object.values(checkedItems).some(checked => checked);
 
   const allIngredients = data.ingredients || {
     carbos: [],
@@ -293,22 +309,54 @@ export default function GenerateShoppingList() {
                 <div className="space-y-2">
                   {items.map(({ id, name, quantity, unit }) => {
                     const isMeat = MEAT_CONVERSION[id] && MEAT_CONVERSION[id] > 1;
+                    const isChecked = checkedItems[id] || false;
                     return (
-                      <div key={id} className="flex items-center justify-between p-2 bg-gray-50 rounded">
-                        <span className="font-medium">{name}</span>
-                        <div className="text-right">
-                          <span className="font-bold">{quantity.toFixed(1)}{unit}</span>
-                          {isMeat && (
-                            <span className="text-xs text-gray-500 ml-1">(cru)</span>
-                          )}
+                      <button
+                        key={id}
+                        onClick={() => handleToggleItem(id)}
+                        className={`w-full flex items-center justify-between p-3 rounded-lg border-2 transition-all text-left ${
+                          isChecked
+                            ? 'border-[#4f6d7a] text-[#4f6d7a] line-through'
+                            : 'bg-gray-50 border-gray-300 text-gray-700'
+                        }`}
+                        style={isChecked ? { backgroundColor: '#c0d6df' } : {}}
+                      >
+                        <div className="flex-1">
+                          <span className="font-medium">{name}</span>
+                          <div className="text-sm text-gray-600 mt-1">
+                            <span className="font-bold">{quantity.toFixed(1)}{unit}</span>
+                            {isMeat && (
+                              <span className="text-xs text-gray-500 ml-1">(cru)</span>
+                            )}
+                          </div>
                         </div>
-                      </div>
+                        <div className={`w-5 h-5 rounded border-2 flex items-center justify-center flex-shrink-0 ml-2 ${
+                          isChecked
+                            ? 'border-[#4f6d7a]'
+                            : 'border-gray-400'
+                        }`}
+                        style={isChecked ? { backgroundColor: '#4f6d7a' } : {}}
+                        >
+                          {isChecked && <span className="text-white text-xs">✓</span>}
+                        </div>
+                      </button>
                     );
                   })}
                 </div>
               </div>
             );
           })}
+          {hasCheckedItems && (
+            <button
+              onClick={clearCheckedItems}
+              className="w-full px-4 py-3 text-white rounded-lg font-medium"
+              style={{ backgroundColor: '#dd6e42' }}
+              onMouseEnter={(e) => e.target.style.backgroundColor = '#c55a2e'}
+              onMouseLeave={(e) => e.target.style.backgroundColor = '#dd6e42'}
+            >
+              Limpar Itens Marcados
+            </button>
+          )}
         </div>
       )}
 
