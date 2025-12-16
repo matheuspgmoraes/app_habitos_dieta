@@ -56,7 +56,7 @@ export default function Dashboard() {
 
   return (
     <div className="p-4 space-y-6 pb-20">
-      <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
+      <h1 className="text-2xl font-bold text-gray-900">Home</h1>
 
       {/* Progresso - Círculos */}
       <div className="bg-white rounded-lg shadow p-4">

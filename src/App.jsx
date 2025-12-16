@@ -10,7 +10,7 @@ import { getWeekStart } from './utils/storage';
 import { calculateDayProgress, calculateWeekProgress } from './utils/calculations';
 
 function App() {
-  const [currentPage, setCurrentPage] = useState('dashboard');
+  const [currentPage, setCurrentPage] = useState('dashboard'); // Mantém 'dashboard' internamente, mas mostra 'Home' na UI
   const { data, saveHistory } = useStorage();
 
   // Salvar histórico ao final da semana

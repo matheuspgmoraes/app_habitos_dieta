@@ -229,73 +229,81 @@ export default function Ingredients() {
                 return (
                   <div
                     key={ingredient.id || idx}
-                    className="flex items-center gap-2 p-2 bg-gray-50 rounded-lg border border-gray-200 min-w-0"
+                    className={`p-2 bg-gray-50 rounded-lg border border-gray-200 min-w-0 ${
+                      isEditing ? 'flex flex-col gap-2' : 'flex items-center gap-2'
+                    }`}
                   >
                     {isEditing ? (
                       <>
-                        <input
-                          type="text"
-                          value={displayIngredient.icon || ''}
-                          onChange={(e) => handleEditIngredient(groupKey, idx, { icon: e.target.value })}
-                          className="w-12 text-center text-lg border rounded flex-shrink-0"
-                          maxLength="2"
-                        />
-                        <input
-                          type="text"
-                          value={displayIngredient.name || ''}
-                          onChange={(e) => handleEditIngredient(groupKey, idx, { name: e.target.value })}
-                          className="flex-1 min-w-0 px-2 py-1 border border-gray-300 rounded text-sm"
-                        />
-                        <select
-                          value={displayIngredient.unit || 'g'}
-                          onChange={(e) => handleEditIngredient(groupKey, idx, { unit: e.target.value })}
-                          className="px-2 py-1 border border-gray-300 rounded text-xs flex-shrink-0"
-                        >
-                          <option value="g">g</option>
-                          <option value="un">un</option>
-                          <option value="porção">porção</option>
-                        </select>
-                        <div className="flex items-center gap-1 flex-shrink-0">
+                        {/* Primeira linha: ícone, nome e unidade */}
+                        <div className="flex items-center gap-2 w-full">
                           <input
-                            type="checkbox"
-                            checked={displayIngredient.hasBaseQuantity || false}
-                            onChange={(e) => handleEditIngredient(groupKey, idx, { hasBaseQuantity: e.target.checked })}
-                            className="w-4 h-4"
+                            type="text"
+                            value={displayIngredient.icon || ''}
+                            onChange={(e) => handleEditIngredient(groupKey, idx, { icon: e.target.value })}
+                            className="w-12 text-center text-lg border rounded flex-shrink-0"
+                            maxLength="2"
                           />
-                          <span className="text-xs text-gray-600">Qtd pré-definida</span>
+                          <input
+                            type="text"
+                            value={displayIngredient.name || ''}
+                            onChange={(e) => handleEditIngredient(groupKey, idx, { name: e.target.value })}
+                            className="flex-1 min-w-0 px-2 py-1 border border-gray-300 rounded text-sm"
+                          />
+                          <select
+                            value={displayIngredient.unit || 'g'}
+                            onChange={(e) => handleEditIngredient(groupKey, idx, { unit: e.target.value })}
+                            className="px-2 py-1 border border-gray-300 rounded text-xs flex-shrink-0"
+                          >
+                            <option value="g">g</option>
+                            <option value="un">un</option>
+                            <option value="porção">porção</option>
+                          </select>
                         </div>
-                        {displayIngredient.hasBaseQuantity && (
-                          <input
-                            type="number"
-                            value={displayIngredient.baseQuantity || ''}
-                            onChange={(e) => handleEditIngredient(groupKey, idx, { baseQuantity: parseFloat(e.target.value) || 0 })}
-                            placeholder="Qtd"
-                            className="w-16 px-1 py-1 border border-gray-300 rounded text-xs text-center"
-                            min="0"
-                            step="0.1"
-                            inputMode="decimal"
-                            onFocus={(e) => {
-                              // Prevenir zoom no iOS
-                              if (window.visualViewport) {
-                                e.target.style.fontSize = '16px';
-                              }
-                            }}
-                            onBlur={(e) => {
-                              if (window.visualViewport) {
-                                e.target.style.fontSize = '';
-                              }
-                            }}
-                          />
-                        )}
-                        <button
-                          onClick={() => handleSaveIngredient(groupKey, idx)}
-                          className="px-2 py-1 text-white rounded text-xs flex-shrink-0"
-                          style={{ backgroundColor: '#4f6d7a' }}
-                          onMouseEnter={(e) => e.target.style.backgroundColor = '#dd6e42'}
-                          onMouseLeave={(e) => e.target.style.backgroundColor = '#4f6d7a'}
-                        >
-                          ✓
-                        </button>
+                        {/* Segunda linha: checkbox e quantidade */}
+                        <div className="flex items-center gap-2 w-full">
+                          <div className="flex items-center gap-1 flex-shrink-0">
+                            <input
+                              type="checkbox"
+                              checked={displayIngredient.hasBaseQuantity || false}
+                              onChange={(e) => handleEditIngredient(groupKey, idx, { hasBaseQuantity: e.target.checked })}
+                              className="w-4 h-4"
+                            />
+                            <span className="text-xs text-gray-600">Qtd pré-definida</span>
+                          </div>
+                          {displayIngredient.hasBaseQuantity && (
+                            <input
+                              type="number"
+                              value={displayIngredient.baseQuantity || ''}
+                              onChange={(e) => handleEditIngredient(groupKey, idx, { baseQuantity: parseFloat(e.target.value) || 0 })}
+                              placeholder="Qtd"
+                              className="w-20 px-2 py-1 border border-gray-300 rounded text-xs text-center"
+                              min="0"
+                              step="0.1"
+                              inputMode="decimal"
+                              onFocus={(e) => {
+                                // Prevenir zoom no iOS
+                                if (window.visualViewport) {
+                                  e.target.style.fontSize = '16px';
+                                }
+                              }}
+                              onBlur={(e) => {
+                                if (window.visualViewport) {
+                                  e.target.style.fontSize = '';
+                                }
+                              }}
+                            />
+                          )}
+                          <button
+                            onClick={() => handleSaveIngredient(groupKey, idx)}
+                            className="ml-auto px-3 py-1 text-white rounded text-xs flex-shrink-0"
+                            style={{ backgroundColor: '#4f6d7a' }}
+                            onMouseEnter={(e) => e.target.style.backgroundColor = '#dd6e42'}
+                            onMouseLeave={(e) => e.target.style.backgroundColor = '#4f6d7a'}
+                          >
+                            ✓ Salvar
+                          </button>
+                        </div>
                       </>
                     ) : (
                       <>
