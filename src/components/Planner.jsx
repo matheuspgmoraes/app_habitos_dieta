@@ -434,11 +434,13 @@ export default function Planner() {
         return;
       }
       
+      // Manter itens existentes se houver
+      const currentMeal = selectedDay?.meals[mealType] || { items: [] };
       const mealData = {
         time: mealTimes[mealType],
         recipeId: recipeId,
         recipeName: recipe.name || '',
-        items: null
+        items: currentMeal.items || [] // Manter itens existentes
       };
       // updatePlanner já cria o dia se não existir
       updatePlanner(selectedDate, mealType, mealData);
@@ -457,10 +459,12 @@ export default function Planner() {
         return;
       }
       
+      // Manter receita existente se houver
+      const currentMeal = selectedDay?.meals[mealType] || { recipeId: null, recipeName: null };
       const mealData = {
         time: mealTimes[mealType],
-        recipeId: null,
-        recipeName: null,
+        recipeId: currentMeal.recipeId || null, // Manter receita existente
+        recipeName: currentMeal.recipeName || null,
         items: selectedItems // Array de objetos { id, quantity }
       };
       // updatePlanner já cria o dia se não existir
@@ -549,55 +553,29 @@ export default function Planner() {
           </label>
         </div>
 
-        {/* Botões para escolher modo */}
-        <div className="flex gap-2">
-          <button
-            onClick={() => setMealMode({ ...mealMode, [mealType]: 'recipe' })}
-            className={`flex-1 px-3 py-2 rounded-lg text-sm font-medium transition-all ${
-              currentMode === 'recipe'
-                ? 'text-white'
-                : 'bg-[#eaeaea] text-gray-700 hover:bg-[#c0d6df]'
-            }`}
-            style={currentMode === 'recipe' ? { backgroundColor: '#4f6d7a' } : {}}
+        {/* Seleção de receita - sempre visível */}
+        <div className="space-y-2">
+          <label className="block text-xs font-medium text-gray-600 mb-1">Receita (opcional)</label>
+          <select
+            value={meal.recipeId || ''}
+            onChange={(e) => handleRecipeSelect(mealType, e.target.value)}
+            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#4f6d7a] focus:border-[#4f6d7a]"
           >
-            📋 Receita
-          </button>
-          <button
-            onClick={() => setMealMode({ ...mealMode, [mealType]: 'individual' })}
-            className={`flex-1 px-3 py-2 rounded-lg text-sm font-medium transition-all ${
-              currentMode === 'individual'
-                ? 'text-white'
-                : 'bg-[#eaeaea] text-gray-700 hover:bg-[#c0d6df]'
-            }`}
-            style={currentMode === 'individual' ? { backgroundColor: '#4f6d7a' } : {}}
-          >
-            🍽️ Itens
-          </button>
+            <option value="">Nenhuma receita</option>
+            {data.recipes.map(recipe => (
+              <option key={recipe.id} value={recipe.id}>{recipe.name}</option>
+            ))}
+          </select>
+          {meal.recipeName && (
+            <p className="text-sm text-gray-600 p-2 rounded" style={{ backgroundColor: '#c0d6df' }}>
+              ✓ {meal.recipeName}
+            </p>
+          )}
         </div>
 
-        {/* Seleção de receita */}
-        {currentMode === 'recipe' && (
-          <div className="space-y-2">
-            <select
-              value={meal.recipeId || ''}
-              onChange={(e) => handleRecipeSelect(mealType, e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
-            >
-              <option value="">Selecione uma receita</option>
-              {data.recipes.map(recipe => (
-                <option key={recipe.id} value={recipe.id}>{recipe.name}</option>
-              ))}
-            </select>
-            {meal.recipeName && (
-              <p className="text-sm text-gray-600 p-2 rounded" style={{ backgroundColor: '#c0d6df' }}>
-                ✓ {meal.recipeName}
-              </p>
-            )}
-          </div>
-        )}
-
-            {/* Seleção de itens individuais */}
-        {currentMode === 'individual' && (
+        {/* Seleção de itens individuais - sempre visível */}
+        <div className="space-y-3">
+          <label className="block text-xs font-medium text-gray-600 mb-1">Ingredientes Adicionais</label>
           <div className="space-y-3">
             {/* Converter items para formato normalizado */}
             {(() => {
@@ -1023,7 +1001,7 @@ export default function Planner() {
               );
             })()}
           </div>
-        )}
+        </div>
       </div>
     );
   };
@@ -1071,51 +1049,6 @@ export default function Planner() {
             <p className="text-sm text-orange-600 mt-1">⚠️ Dia de trabalho - lanches devem ser frutas fáceis</p>
           )}
           
-          {/* Seletor de Atividades */}
-          <div className="mt-3">
-            <label className="block text-sm font-medium text-gray-700 mb-2">Atividades do Dia</label>
-            {Object.keys(activities).length === 0 ? (
-              <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
-                <p className="text-sm text-yellow-800">
-                  Nenhuma atividade cadastrada. Vá em <strong>Atividades</strong> para criar atividades.
-                </p>
-              </div>
-            ) : (
-              <div className="space-y-2">
-                {Object.entries(activities).map(([id, activity]) => {
-                  const isSelected = dayActivities.includes(id);
-                  return (
-                    <button
-                      key={id}
-                      onClick={() => handleActivityToggle(id)}
-                      className={`w-full flex items-center justify-between p-3 rounded-lg border-2 transition-all ${
-                        isSelected
-                          ? 'bg-blue-50 border-blue-500 text-blue-900'
-                          : 'bg-gray-50 border-gray-300 text-gray-700'
-                      }`}
-                    >
-                      <div className="flex items-center gap-3">
-                        <span className="text-2xl">{activity.icon}</span>
-                        <span className="font-medium">{activity.name}</span>
-                      </div>
-                      <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center ${
-                        isSelected
-                          ? 'bg-blue-500 border-blue-500'
-                          : 'border-gray-400'
-                      }`}>
-                        {isSelected && <span className="text-white text-sm">✓</span>}
-                      </div>
-                    </button>
-                  );
-                })}
-                {dayActivities.length > 0 && (
-                  <p className="text-xs text-gray-500 mt-2">
-                    As atividades selecionadas aparecerão automaticamente no Checklist de Hábitos
-                  </p>
-                )}
-              </div>
-            )}
-          </div>
         </div>
 
         {/* Refeições */}

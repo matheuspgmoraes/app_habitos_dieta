@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { useStorage } from '../hooks/useStorage';
 
 const DEFAULT_INGREDIENTS = {
@@ -59,6 +59,9 @@ export default function Ingredients() {
   const [newIngredient, setNewIngredient] = useState({ name: '', icon: '📝', group: 'carbos', unit: 'g' });
   const [editingId, setEditingId] = useState(null);
   const [editingData, setEditingData] = useState({});
+  const [swipedId, setSwipedId] = useState(null);
+  const swipeStartX = useRef(0);
+  const swipeCurrentX = useRef(0);
 
   if (!data) return <div className="p-4">Carregando...</div>;
 
@@ -226,12 +229,40 @@ export default function Ingredients() {
                   ? { ...ingredient, ...currentEditing }
                   : ingredient;
 
+                const handleSwipeStart = (e) => {
+                  swipeStartX.current = e.touches ? e.touches[0].clientX : e.clientX;
+                };
+
+                const handleSwipeMove = (e) => {
+                  if (!swipeStartX.current) return;
+                  swipeCurrentX.current = e.touches ? e.touches[0].clientX : e.clientX;
+                  const diff = swipeStartX.current - swipeCurrentX.current;
+                  // Arrastar para esquerda (diff positivo) mostra botões
+                  if (diff > 50) {
+                    setSwipedId(editId);
+                  } else if (diff < -50) {
+                    setSwipedId(null);
+                  }
+                };
+
+                const handleSwipeEnd = () => {
+                  swipeStartX.current = 0;
+                  swipeCurrentX.current = 0;
+                };
+
                 return (
                   <div
                     key={ingredient.id || idx}
-                    className={`p-2 bg-gray-50 rounded-lg border border-gray-200 min-w-0 ${
+                    className={`p-2 bg-gray-50 rounded-lg border border-gray-200 min-w-0 relative overflow-hidden ${
                       isEditing ? 'flex flex-col gap-2' : 'flex items-center gap-2'
                     }`}
+                    onTouchStart={handleSwipeStart}
+                    onTouchMove={handleSwipeMove}
+                    onTouchEnd={handleSwipeEnd}
+                    onMouseDown={handleSwipeStart}
+                    onMouseMove={handleSwipeMove}
+                    onMouseUp={handleSwipeEnd}
+                    onMouseLeave={handleSwipeEnd}
                   >
                     {isEditing ? (
                       <>
@@ -308,42 +339,48 @@ export default function Ingredients() {
                     ) : (
                       <>
                         <span className="text-xl flex-shrink-0">{ingredient.icon}</span>
-                        <span className="flex-1 text-sm font-medium break-words min-w-0">{ingredient.name}</span>
-                        <span className="text-xs text-gray-500 flex-shrink-0">({ingredient.unit || 'g'})</span>
+                        <span className="flex-1 text-sm font-medium whitespace-nowrap overflow-hidden text-ellipsis min-w-0">{ingredient.name}</span>
+                        <span className="text-xs text-gray-500 flex-shrink-0 whitespace-nowrap">({ingredient.unit || 'g'})</span>
                         {ingredient.hasBaseQuantity && (
-                          <span className="text-xs text-gray-600 flex-shrink-0 px-1 py-0.5 rounded" style={{ backgroundColor: '#c0d6df' }}>
-                            Qtd pré-definida: {ingredient.baseQuantity || 0}{ingredient.unit || 'g'}
+                          <span className="text-xs text-gray-600 flex-shrink-0 px-1 py-0.5 rounded whitespace-nowrap" style={{ backgroundColor: '#c0d6df' }}>
+                            {ingredient.baseQuantity || 0}{ingredient.unit || 'g'}
                           </span>
                         )}
-                        <button
-                          onClick={() => {
-                            // Inicializar com todos os campos do ingrediente, incluindo hasBaseQuantity e baseQuantity
-                            setEditingData(prev => ({
-                              ...prev,
-                              [editId]: { 
-                                ...ingredient,
-                                hasBaseQuantity: ingredient.hasBaseQuantity || false,
-                                baseQuantity: ingredient.baseQuantity || undefined
-                              }
-                            }));
-                            setEditingId(editId);
-                          }}
-                          className="px-2 py-1 text-white rounded text-xs flex-shrink-0 whitespace-nowrap"
-                          style={{ backgroundColor: '#4f6d7a' }}
-                          onMouseEnter={(e) => e.target.style.backgroundColor = '#dd6e42'}
-                          onMouseLeave={(e) => e.target.style.backgroundColor = '#4f6d7a'}
-                        >
-                          Editar
-                        </button>
-                        <button
-                          onClick={() => handleDeleteIngredient(groupKey, idx)}
-                          className="px-2 py-1 text-white rounded text-xs flex-shrink-0"
-                          style={{ backgroundColor: '#dd6e42' }}
-                          onMouseEnter={(e) => e.target.style.backgroundColor = '#c55a2e'}
-                          onMouseLeave={(e) => e.target.style.backgroundColor = '#dd6e42'}
-                        >
-                          ×
-                        </button>
+                        <div className={`flex items-center gap-1 transition-transform duration-300 ${swipedId === editId ? 'translate-x-0 opacity-100' : 'translate-x-full opacity-0 pointer-events-none'}`}>
+                          <button
+                            onClick={() => {
+                              // Inicializar com todos os campos do ingrediente, incluindo hasBaseQuantity e baseQuantity
+                              setEditingData(prev => ({
+                                ...prev,
+                                [editId]: { 
+                                  ...ingredient,
+                                  hasBaseQuantity: ingredient.hasBaseQuantity || false,
+                                  baseQuantity: ingredient.baseQuantity || undefined
+                                }
+                              }));
+                              setEditingId(editId);
+                              setSwipedId(null);
+                            }}
+                            className="px-2 py-1 text-white rounded text-xs flex-shrink-0 whitespace-nowrap"
+                            style={{ backgroundColor: '#4f6d7a' }}
+                            onMouseEnter={(e) => e.target.style.backgroundColor = '#dd6e42'}
+                            onMouseLeave={(e) => e.target.style.backgroundColor = '#4f6d7a'}
+                          >
+                            Editar
+                          </button>
+                          <button
+                            onClick={() => {
+                              handleDeleteIngredient(groupKey, idx);
+                              setSwipedId(null);
+                            }}
+                            className="px-2 py-1 text-white rounded text-xs flex-shrink-0"
+                            style={{ backgroundColor: '#dd6e42' }}
+                            onMouseEnter={(e) => e.target.style.backgroundColor = '#c55a2e'}
+                            onMouseLeave={(e) => e.target.style.backgroundColor = '#dd6e42'}
+                          >
+                            ×
+                          </button>
+                        </div>
                       </>
                     )}
                   </div>

@@ -9,7 +9,7 @@ export default function Navigation({ currentPage, onNavigate }) {
 
   return (
     <nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 shadow-lg z-50" style={{ paddingBottom: 'max(8px, env(safe-area-inset-bottom))' }}>
-      <div className="flex justify-around items-start px-0 py-2 max-w-full overflow-hidden">
+      <div className="flex justify-around items-start px-0 py-4 max-w-full overflow-hidden">
         {navItems.map(item => {
           const isActive = currentPage === item.id;
           return (

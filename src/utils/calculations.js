@@ -41,22 +41,35 @@ export function calculateDayProgress(checklistItems, customItems = null) {
   return total > 0 ? Math.round((completed / total) * 100) : 0;
 }
 
-export function calculateWeekProgress(checklist) {
+export function calculateWeekProgress(checklist, customItems = null) {
   if (!checklist || checklist.length === 0) return 0;
   
-  let totalItems = 0;
-  let completedItems = 0;
+  // Obter apenas os últimos 7 dias
+  const today = new Date();
+  const weekStart = new Date(today);
+  weekStart.setDate(today.getDate() - today.getDay()); // Domingo da semana
+  weekStart.setHours(0, 0, 0, 0);
   
-  checklist.forEach(day => {
-    const items = Object.values(day.items);
-    totalItems += items.length;
-    completedItems += items.filter(Boolean).length;
+  const weekDays = checklist.filter(day => {
+    const dayDate = new Date(day.date);
+    return dayDate >= weekStart && dayDate < new Date(weekStart.getTime() + 7 * 24 * 60 * 60 * 1000);
   });
   
-  return totalItems > 0 ? Math.round((completedItems / totalItems) * 100) : 0;
+  if (weekDays.length === 0) return 0;
+  
+  let totalProgress = 0;
+  let daysCount = 0;
+  
+  weekDays.forEach(day => {
+    const dayProgress = calculateDayProgress(day.items, customItems);
+    totalProgress += dayProgress;
+    daysCount += 1;
+  });
+  
+  return daysCount > 0 ? Math.round(totalProgress / daysCount) : 0;
 }
 
-export function calculateMonthProgress(checklist, year, month) {
+export function calculateMonthProgress(checklist, year, month, customItems = null) {
   if (!checklist || checklist.length === 0) return 0;
   
   const monthDays = checklist.filter(day => {
@@ -66,19 +79,19 @@ export function calculateMonthProgress(checklist, year, month) {
   
   if (monthDays.length === 0) return 0;
   
-  let totalItems = 0;
-  let completedItems = 0;
+  let totalProgress = 0;
+  let daysCount = 0;
   
   monthDays.forEach(day => {
-    const items = Object.values(day.items);
-    totalItems += items.length;
-    completedItems += items.filter(Boolean).length;
+    const dayProgress = calculateDayProgress(day.items, customItems);
+    totalProgress += dayProgress;
+    daysCount += 1;
   });
   
-  return totalItems > 0 ? Math.round((completedItems / totalItems) * 100) : 0;
+  return daysCount > 0 ? Math.round(totalProgress / daysCount) : 0;
 }
 
-export function calculateYearProgress(checklist, year) {
+export function calculateYearProgress(checklist, year, customItems = null) {
   if (!checklist || checklist.length === 0) return 0;
   
   const yearDays = checklist.filter(day => {
@@ -88,16 +101,16 @@ export function calculateYearProgress(checklist, year) {
   
   if (yearDays.length === 0) return 0;
   
-  let totalItems = 0;
-  let completedItems = 0;
+  let totalProgress = 0;
+  let daysCount = 0;
   
   yearDays.forEach(day => {
-    const items = Object.values(day.items);
-    totalItems += items.length;
-    completedItems += items.filter(Boolean).length;
+    const dayProgress = calculateDayProgress(day.items, customItems);
+    totalProgress += dayProgress;
+    daysCount += 1;
   });
   
-  return totalItems > 0 ? Math.round((completedItems / totalItems) * 100) : 0;
+  return daysCount > 0 ? Math.round(totalProgress / daysCount) : 0;
 }
 
 export function getCurrentDayData(checklist, planner) {

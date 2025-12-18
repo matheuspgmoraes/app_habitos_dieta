@@ -1,7 +1,36 @@
-export default function DraggableProgressBar({ value, max = 100, onChange, label, icon, itemKey }) {
+export default function DraggableProgressBar({ value, max = 100, onChange, label, icon, itemKey, isCheckbox = false }) {
   const safeValue = Number(value) || 0;
   const safeMax = Number(max) || 100;
   const percentage = Math.min(Math.max((safeValue / safeMax) * 100, 0), 100);
+  
+  // Se for checkbox, tratar como boolean
+  if (isCheckbox) {
+    const isChecked = safeValue >= safeMax;
+    const handleToggle = () => {
+      onChange(isChecked ? 0 : safeMax);
+    };
+    
+    return (
+      <div className="w-full">
+        <div className="flex items-center justify-between mb-2">
+          <div className="flex items-center gap-2">
+            {icon && <span className="text-xl">{icon}</span>}
+            <span className="font-medium">{label}</span>
+          </div>
+          <input
+            type="checkbox"
+            checked={isChecked}
+            onChange={handleToggle}
+            className="w-5 h-5 rounded border-2 cursor-pointer"
+            style={{
+              accentColor: '#4f6d7a',
+              borderColor: isChecked ? '#4f6d7a' : '#c0d6df'
+            }}
+          />
+        </div>
+      </div>
+    );
+  }
   const colors = {
     primary: '#4f6d7a',
     secondary: '#dd6e42',
@@ -12,6 +41,15 @@ export default function DraggableProgressBar({ value, max = 100, onChange, label
   // Calcular pontos de parada baseado no max
   const getSnapPoints = () => {
     const points = [0]; // Sempre pode voltar para 0
+    
+    // Para água, incrementos de 100ml
+    if (itemKey === 'agua') {
+      for (let i = 100; i <= safeMax; i += 100) {
+        points.push(i);
+      }
+      return points;
+    }
+    
     if (safeMax === 1) {
       return [0, 1];
     } else if (safeMax === 2) {

@@ -47,7 +47,7 @@ export default function Checklist() {
 
   const selectedDay = data.checklist.find(d => d.date === selectedDate);
   const dayProgress = selectedDay ? calculateDayProgress(selectedDay.items, customChecklistItems) : 0;
-  const weekProgress = calculateWeekProgress(data.checklist);
+  const weekProgress = calculateWeekProgress(data.checklist, customChecklistItems);
 
   // Hábitos diários (rotina)
   const allDailyHabits = data.dailyHabits || [];
@@ -385,32 +385,41 @@ export default function Checklist() {
                       </div>
                       {/* Lista de itens existentes */}
                       <div className="space-y-2">
-                        {customChecklistItems.map((item) => (
-                          <div key={item.key} className="flex items-center justify-between bg-white rounded p-2">
-                            <div className="flex items-center gap-2">
-                              <span className="text-xl">{item.icon}</span>
-                              <span className="font-medium">{item.label}</span>
-                              <span className="text-xs text-gray-500">(max: {item.max})</span>
-                            </div>
-                            <button
-                              onClick={() => {
-                                if (!confirm('Tem certeza que deseja remover este item?')) return;
-                                const updated = { ...data };
-                                updated.customChecklistItems = updated.customChecklistItems.filter(i => i.key !== item.key);
-                                // Limpar valores deste item em todos os dias
-                                updated.checklist.forEach(day => {
-                                  if (day.items && day.items[item.key]) {
-                                    delete day.items[item.key];
+                        <h4 className="text-sm font-medium mb-2">Itens Atuais</h4>
+                        {customChecklistItems.length === 0 ? (
+                          <p className="text-sm text-gray-500 text-center py-2">Nenhum item personalizado ainda</p>
+                        ) : (
+                          customChecklistItems.map((item) => (
+                            <div key={item.key} className="flex items-center justify-between bg-white rounded p-2 border border-gray-200">
+                              <div className="flex items-center gap-2 flex-1 min-w-0">
+                                <span className="text-xl flex-shrink-0">{item.icon}</span>
+                                <span className="font-medium truncate">{item.label}</span>
+                                <span className="text-xs text-gray-500 flex-shrink-0">(max: {item.max})</span>
+                              </div>
+                              <button
+                                onClick={() => {
+                                  if (!confirm('Tem certeza que deseja remover este item?')) return;
+                                  const updated = { ...data };
+                                  if (!updated.customChecklistItems) updated.customChecklistItems = [];
+                                  updated.customChecklistItems = updated.customChecklistItems.filter(i => i.key !== item.key);
+                                  // Limpar valores deste item em todos os dias
+                                  if (updated.checklist) {
+                                    updated.checklist.forEach(day => {
+                                      if (day.items && day.items[item.key]) {
+                                        delete day.items[item.key];
+                                      }
+                                    });
                                   }
-                                });
-                                updateData(updated);
-                              }}
-                              className="px-2 py-1 bg-[#dd6e42] text-white rounded text-xs hover:bg-red-700"
-                            >
-                              ×
-                            </button>
-                          </div>
-                        ))}
+                                  updateData(updated);
+                                }}
+                                className="px-3 py-1 bg-[#dd6e42] text-white rounded text-xs hover:bg-red-700 flex-shrink-0 ml-2"
+                                title="Remover item"
+                              >
+                                × Remover
+                              </button>
+                            </div>
+                          ))
+                        )}
                       </div>
                     </div>
                   </div>
@@ -418,6 +427,8 @@ export default function Checklist() {
 
                 {customChecklistItems.map((item) => {
                   const value = selectedDay?.items[item.key] || 0;
+                  // Se max é 1, usar checkbox
+                  const isCheckbox = (item.max || 1) === 1;
                   return (
                     <DraggableProgressBar
                       key={item.key}
@@ -427,11 +438,12 @@ export default function Checklist() {
                       label={item.label}
                       icon={item.icon}
                       itemKey={item.key}
+                      isCheckbox={isCheckbox}
                     />
                   );
                 })}
 
-                {/* Água com barra arrastável */}
+                {/* Água com barra arrastável - incrementos de 100ml */}
                 <DraggableProgressBar
                   value={waterAmount * 1000} // Converter para ml (0-3000ml = 0-3L)
                   max={3000}
