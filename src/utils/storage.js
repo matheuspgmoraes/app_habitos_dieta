@@ -63,12 +63,7 @@ function getDefaultData() {
       sunday: DEFAULT_SUNDAY_TASKS,
       wednesday: DEFAULT_WEDNESDAY_TASKS
     },
-    ingredients: null, // Será inicializado com padrão no componente
-    activities: {
-      vôlei: { name: 'Vôlei', icon: '🏐', time: '20:00' },
-      academia: { name: 'Academia', icon: '💪', time: null }
-    },
-    dailyHabits: [] // Hábitos diários personalizáveis (cada hábito tem: id, name, icon, type, target)
+    ingredients: null // Será inicializado com padrão no componente
   };
 }
 

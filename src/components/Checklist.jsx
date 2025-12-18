@@ -8,16 +8,9 @@ export default function Checklist() {
   const { data, updateChecklist, updateData } = useStorage();
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
   const [showHistory, setShowHistory] = useState(false);
-  // Removido activeTab - só mostrar alimentação
-  const [showHabitsEditor, setShowHabitsEditor] = useState(false);
   const [showFoodEditor, setShowFoodEditor] = useState(false);
   const [actionHistory, setActionHistory] = useState([]); // Histórico de ações para desfazer
-  const [newHabit, setNewHabit] = useState({ 
-    name: '', 
-    icon: '📝',
-    type: 'boolean', // 'boolean', 'quantity', 'timesPerDay', 'timesPerWeek'
-    target: 1
-  });
+  const [editingItem, setEditingItem] = useState(null); // Item sendo editado
   const [newFoodItem, setNewFoodItem] = useState({
     label: '',
     icon: '🍽️',
@@ -26,8 +19,8 @@ export default function Checklist() {
 
   if (!data) return <div className="p-4">Carregando...</div>;
 
-  // Checklist items customizáveis (carregar do storage ou usar padrão)
-  const customChecklistItems = data.customChecklistItems || [
+  // Checklist items padrões
+  const defaultChecklistItems = [
     { key: 'cafe', label: 'Café da manhã', icon: '☕', max: 1 },
     { key: 'lancheManha', label: 'Lanche da manhã', icon: '🍎', max: 1 },
     { key: 'almoco', label: 'Almoço', icon: '🍽️', max: 1 },
@@ -37,6 +30,31 @@ export default function Checklist() {
     { key: 'creatina', label: 'Creatina', icon: '💊', max: 1 }
   ];
 
+  // Checklist items customizáveis (carregar do storage ou usar padrão)
+  let customChecklistItems = data.customChecklistItems || [];
+  
+  // Se não houver customChecklistItems, inicializar com os padrões
+  if (!customChecklistItems || customChecklistItems.length === 0) {
+    customChecklistItems = [...defaultChecklistItems];
+    // Salvar os itens padrões
+    const updated = { ...data };
+    updated.customChecklistItems = customChecklistItems;
+    updateData(updated);
+  } else {
+    // Garantir que todos os itens padrões estejam presentes
+    const defaultKeys = defaultChecklistItems.map(item => item.key);
+    const existingKeys = customChecklistItems.map(item => item.key);
+    const missingKeys = defaultKeys.filter(key => !existingKeys.includes(key));
+    
+    if (missingKeys.length > 0) {
+      const missingItems = defaultChecklistItems.filter(item => missingKeys.includes(item.key));
+      customChecklistItems = [...customChecklistItems, ...missingItems];
+      const updated = { ...data };
+      updated.customChecklistItems = customChecklistItems;
+      updateData(updated);
+    }
+  }
+
   const weekStart = getWeekStart(new Date());
   const week = [];
   for (let i = 0; i < 7; i++) {
@@ -45,31 +63,17 @@ export default function Checklist() {
     week.push(date.toISOString().split('T')[0]);
   }
 
-  const selectedDay = data.checklist.find(d => d.date === selectedDate);
-  const dayProgress = selectedDay ? calculateDayProgress(selectedDay.items, customChecklistItems) : 0;
-  const weekProgress = calculateWeekProgress(data.checklist, customChecklistItems);
+  // Recalcular selectedDay sempre que data ou selectedDate mudar
+  const selectedDay = data?.checklist?.find(d => d && d.date === selectedDate) || null;
+  const dayProgress = selectedDay ? calculateDayProgress(selectedDay.items || {}, customChecklistItems) : 0;
+  const weekProgress = calculateWeekProgress(data?.checklist || [], customChecklistItems);
 
-  // Hábitos diários (rotina)
-  const allDailyHabits = data.dailyHabits || [];
-  const habitsProgress = selectedDay?.habits || {};
-  
-  // Obter atividades selecionadas no Planner para este dia
-  const plannerDay = data.planner?.find(d => d.date === selectedDate);
-  const dayActivities = plannerDay?.activities || [];
-  
-  // Filtrar hábitos: mostrar apenas hábitos normais + atividades selecionadas para este dia
-  const dailyHabits = allDailyHabits.filter(habit => {
-    // Se é um hábito de atividade (começa com "activity-")
-    if (habit.id.startsWith('activity-')) {
-      const activityId = habit.id.replace('activity-', '');
-      return dayActivities.includes(activityId);
-    }
-    // Hábitos normais sempre aparecem
-    return true;
-  });
 
   const handleProgressChange = (itemKey, value) => {
-    const oldValue = selectedDay?.items[itemKey] || 0;
+    // Pegar o valor atual diretamente dos dados para garantir que está atualizado
+    const currentDay = data?.checklist?.find(d => d && d.date === selectedDate);
+    const oldValue = currentDay?.items?.[itemKey] || 0;
+    
     // Salvar no histórico antes de atualizar
     setActionHistory(prev => [...prev, {
       type: 'item',
@@ -79,6 +83,8 @@ export default function Checklist() {
       newValue: value,
       timestamp: Date.now()
     }]);
+    
+    // Atualizar o checklist
     updateChecklist(selectedDate, itemKey, value);
   };
 
@@ -106,44 +112,6 @@ export default function Checklist() {
     setActionHistory(prev => prev.slice(0, -1));
   };
 
-  const handleHabitChange = (habitId, value) => {
-    const updated = { ...data };
-    const dayIndex = updated.checklist.findIndex(d => d.date === selectedDate);
-    if (dayIndex !== -1) {
-      if (!updated.checklist[dayIndex].habits) {
-        updated.checklist[dayIndex].habits = {};
-      }
-      updated.checklist[dayIndex].habits[habitId] = value;
-      updateData(updated);
-    }
-  };
-
-  const handleAddHabit = () => {
-    if (!newHabit.name.trim()) return;
-    const updated = { ...data };
-    const habit = {
-      id: `habit-${Date.now()}`,
-      name: newHabit.name.trim(),
-      icon: newHabit.icon || '📝',
-      type: newHabit.type,
-      target: newHabit.target || 1
-    };
-    updated.dailyHabits.push(habit);
-    updateData(updated);
-    setNewHabit({ name: '', icon: '📝', type: 'boolean', target: 1 });
-  };
-
-  const handleDeleteHabit = (habitId) => {
-    if (!confirm('Tem certeza que deseja excluir este hábito?')) return;
-    const updated = { ...data };
-    updated.dailyHabits = updated.dailyHabits.filter(h => h.id !== habitId);
-    updated.checklist.forEach(day => {
-      if (day.habits && day.habits[habitId]) {
-        delete day.habits[habitId];
-      }
-    });
-    updateData(updated);
-  };
 
   const waterAmount = selectedDay?.items?.agua || 0;
 
@@ -366,33 +334,105 @@ export default function Checklist() {
                           <p className="text-sm text-gray-500 text-center py-2">Nenhum item personalizado ainda</p>
                         ) : (
                           customChecklistItems.map((item) => (
-                            <div key={item.key} className="flex items-center justify-between bg-white rounded p-2 border border-gray-200">
-                              <div className="flex items-center gap-2 flex-1 min-w-0">
-                                <span className="text-xl flex-shrink-0">{item.icon}</span>
-                                <span className="font-medium truncate">{item.label}</span>
-                                <span className="text-xs text-gray-500 flex-shrink-0">(max: {item.max})</span>
-                              </div>
-                              <button
-                                onClick={() => {
-                                  if (!confirm('Tem certeza que deseja remover este item?')) return;
-                                  const updated = { ...data };
-                                  if (!updated.customChecklistItems) updated.customChecklistItems = [];
-                                  updated.customChecklistItems = updated.customChecklistItems.filter(i => i.key !== item.key);
-                                  // Limpar valores deste item em todos os dias
-                                  if (updated.checklist) {
-                                    updated.checklist.forEach(day => {
-                                      if (day.items && day.items[item.key]) {
-                                        delete day.items[item.key];
-                                      }
-                                    });
-                                  }
-                                  updateData(updated);
-                                }}
-                                className="px-3 py-1 bg-[#dd6e42] text-white rounded text-xs hover:bg-red-700 flex-shrink-0 ml-2"
-                                title="Remover item"
-                              >
-                                × Remover
-                              </button>
+                            <div key={item.key} className="bg-white rounded p-3 border border-gray-200">
+                              {editingItem?.key === item.key ? (
+                                // Modo de edição
+                                <div className="space-y-2">
+                                  <div className="flex gap-2 flex-wrap">
+                                    <input
+                                      type="text"
+                                      value={editingItem.icon}
+                                      onChange={(e) => setEditingItem({ ...editingItem, icon: e.target.value })}
+                                      placeholder="Emoji"
+                                      className="w-16 px-2 py-2 border border-gray-300 rounded-lg text-center text-xl"
+                                      maxLength="2"
+                                    />
+                                    <input
+                                      type="text"
+                                      value={editingItem.label}
+                                      onChange={(e) => setEditingItem({ ...editingItem, label: e.target.value })}
+                                      placeholder="Nome do item"
+                                      className="flex-1 min-w-0 px-3 py-2 border border-gray-300 rounded-lg"
+                                    />
+                                    <input
+                                      type="number"
+                                      value={editingItem.max}
+                                      onChange={(e) => setEditingItem({ ...editingItem, max: parseInt(e.target.value) || 1 })}
+                                      placeholder="Max"
+                                      min="1"
+                                      className="w-20 px-3 py-2 border border-gray-300 rounded-lg"
+                                    />
+                                  </div>
+                                  <div className="flex gap-2">
+                                    <button
+                                      onClick={() => {
+                                        if (!editingItem.label.trim()) {
+                                          alert('O nome do item é obrigatório');
+                                          return;
+                                        }
+                                        const updated = JSON.parse(JSON.stringify(data));
+                                        const itemIndex = updated.customChecklistItems.findIndex(i => i.key === item.key);
+                                        if (itemIndex !== -1) {
+                                          updated.customChecklistItems[itemIndex] = {
+                                            ...editingItem,
+                                            label: editingItem.label.trim()
+                                          };
+                                          updateData(updated);
+                                        }
+                                        setEditingItem(null);
+                                      }}
+                                      className="px-3 py-1 bg-[#4f6d7a] text-white rounded text-xs hover:bg-[#3d5560] flex-1"
+                                    >
+                                      Salvar
+                                    </button>
+                                    <button
+                                      onClick={() => setEditingItem(null)}
+                                      className="px-3 py-1 bg-gray-300 text-gray-700 rounded text-xs hover:bg-gray-400"
+                                    >
+                                      Cancelar
+                                    </button>
+                                  </div>
+                                </div>
+                              ) : (
+                                // Modo de visualização
+                                <div className="flex items-center justify-between">
+                                  <div className="flex items-center gap-2 flex-1 min-w-0">
+                                    <span className="text-xl flex-shrink-0">{item.icon}</span>
+                                    <span className="font-medium truncate">{item.label}</span>
+                                    <span className="text-xs text-gray-500 flex-shrink-0">(max: {item.max})</span>
+                                  </div>
+                                  <div className="flex gap-1">
+                                    <button
+                                      onClick={() => setEditingItem({ ...item })}
+                                      className="px-2 py-1 bg-[#4f6d7a] text-white rounded text-xs hover:bg-[#3d5560] flex-shrink-0"
+                                      title="Editar item"
+                                    >
+                                      ✏️
+                                    </button>
+                                    <button
+                                      onClick={() => {
+                                        if (!confirm('Tem certeza que deseja remover este item de todos os dias?')) return;
+                                        const updated = JSON.parse(JSON.stringify(data)); // Deep copy
+                                        if (!updated.customChecklistItems) updated.customChecklistItems = [];
+                                        updated.customChecklistItems = updated.customChecklistItems.filter(i => i.key !== item.key);
+                                        // Limpar valores deste item em todos os dias
+                                        if (updated.checklist) {
+                                          updated.checklist.forEach(day => {
+                                            if (day.items && day.items[item.key]) {
+                                              delete day.items[item.key];
+                                            }
+                                          });
+                                        }
+                                        updateData(updated);
+                                      }}
+                                      className="px-2 py-1 bg-[#dd6e42] text-white rounded text-xs hover:bg-red-700 flex-shrink-0"
+                                      title="Remover item"
+                                    >
+                                      ×
+                                    </button>
+                                  </div>
+                                </div>
+                              )}
                             </div>
                           ))
                         )}
@@ -402,7 +442,9 @@ export default function Checklist() {
                 )}
 
                 {customChecklistItems.map((item) => {
-                  const value = selectedDay?.items[item.key] || 0;
+                  // Recalcular value sempre que renderizar
+                  const currentDay = data?.checklist?.find(d => d && d.date === selectedDate);
+                  const value = currentDay?.items?.[item.key] || 0;
                   // Se max é 1, usar checkbox
                   const isCheckbox = (item.max || 1) === 1;
                   return (
@@ -410,25 +452,37 @@ export default function Checklist() {
                       <DraggableProgressBar
                         value={value}
                         max={item.max || 1}
-                        onChange={(newValue) => handleProgressChange(item.key, newValue)}
+                        onChange={(newValue) => {
+                          handleProgressChange(item.key, newValue);
+                        }}
                         label={item.label}
                         icon={item.icon}
                         itemKey={item.key}
                         isCheckbox={isCheckbox}
                       />
-                      {value > 0 && (
-                        <button
-                          onClick={() => {
+                      <button
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          const currentValue = currentDay?.items?.[item.key] || 0;
+                          if (currentValue > 0) {
                             if (confirm(`Remover ${item.label} apenas deste dia?`)) {
                               handleProgressChange(item.key, 0);
                             }
-                          }}
-                          className="absolute top-0 right-0 px-2 py-1 text-xs text-red-600 hover:text-red-800"
-                          title="Remover apenas deste dia"
-                        >
-                          ×
-                        </button>
-                      )}
+                          } else {
+                            // Se não tem valor, adicionar (marcar)
+                            handleProgressChange(item.key, item.max || 1);
+                          }
+                        }}
+                        className={`absolute top-0 right-0 px-2 py-1 text-xs z-10 ${
+                          (currentDay?.items?.[item.key] || 0) > 0
+                            ? 'text-red-600 hover:text-red-800'
+                            : 'text-gray-400 hover:text-gray-600'
+                        }`}
+                        title={(currentDay?.items?.[item.key] || 0) > 0 ? "Remover apenas deste dia" : "Adicionar neste dia"}
+                      >
+                        {(currentDay?.items?.[item.key] || 0) > 0 ? '×' : '+'}
+                      </button>
                     </div>
                   );
                 })}

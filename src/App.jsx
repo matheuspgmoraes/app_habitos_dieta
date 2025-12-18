@@ -3,7 +3,6 @@ import Dashboard from './components/Dashboard';
 import Planner from './components/Planner';
 import Checklist from './components/Checklist';
 import RecipesAndMore from './components/RecipesAndMore';
-import Activities from './components/Activities';
 import Navigation from './components/Navigation';
 import { useStorage } from './hooks/useStorage';
 import { getWeekStart } from './utils/storage';
@@ -15,30 +14,34 @@ function App() {
 
   // Salvar histórico ao final da semana
   useEffect(() => {
-    if (!data) return;
+    if (!data || !data.history || !data.checklist) return;
 
-    const today = new Date();
-    const weekStart = getWeekStart(today);
-    const weekStartStr = weekStart.toISOString().split('T')[0];
-    
-    // Verificar se já salvou histórico para esta semana
-    const hasHistory = data.history.some(h => h.weekStart === weekStartStr);
-    
-    if (!hasHistory && data.checklist.length > 0) {
-      // Calcular porcentagens diárias
-      const dailyPercentages = data.checklist.map(day => 
-        calculateDayProgress(day.items)
-      );
-      const weeklyPercentage = calculateWeekProgress(data.checklist);
+    try {
+      const today = new Date();
+      const weekStart = getWeekStart(today);
+      const weekStartStr = weekStart.toISOString().split('T')[0];
+      
+      // Verificar se já salvou histórico para esta semana
+      const hasHistory = Array.isArray(data.history) && data.history.some(h => h.weekStart === weekStartStr);
+      
+      if (!hasHistory && Array.isArray(data.checklist) && data.checklist.length > 0) {
+        // Calcular porcentagens diárias
+        const dailyPercentages = data.checklist.map(day => 
+          calculateDayProgress(day.items || {})
+        );
+        const weeklyPercentage = calculateWeekProgress(data.checklist);
 
-      // Salvar histórico no domingo à noite
-      if (today.getDay() === 0 && today.getHours() >= 22) {
-        saveHistory({
-          weekStart: weekStartStr,
-          dailyPercentages,
-          weeklyPercentage
-        });
+        // Salvar histórico no domingo à noite
+        if (today.getDay() === 0 && today.getHours() >= 22) {
+          saveHistory({
+            weekStart: weekStartStr,
+            dailyPercentages,
+            weeklyPercentage
+          });
+        }
       }
+    } catch (error) {
+      console.error('Erro ao processar histórico:', error);
     }
   }, [data, saveHistory]);
 

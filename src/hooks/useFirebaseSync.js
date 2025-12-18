@@ -13,27 +13,39 @@ export function useFirebaseSync(userId, data, updateData) {
 
   // Autenticar anonimamente
   useEffect(() => {
-    if (!auth || !database) {
-      setError('Firebase não configurado. Configure as credenciais em src/config/firebase.js');
-      return;
-    }
-
-    signInAnonymously(auth)
-      .then(() => {
-        setIsConnected(true);
-        setError(null);
-      })
-      .catch((err) => {
-        console.error('Erro na autenticação:', err);
-        setError('Erro ao conectar com Firebase: ' + err.message);
+    try {
+      if (!auth || !database) {
+        // Firebase não configurado - não é um erro crítico, apenas não sincroniza
         setIsConnected(false);
-      });
+        setError(null); // Não mostrar erro se não estiver configurado
+        return;
+      }
+
+      signInAnonymously(auth)
+        .then(() => {
+          setIsConnected(true);
+          setError(null);
+        })
+        .catch((err) => {
+          console.error('Erro na autenticação:', err);
+          setError('Erro ao conectar com Firebase: ' + err.message);
+          setIsConnected(false);
+        });
+    } catch (err) {
+      console.error('Erro ao inicializar Firebase sync:', err);
+      setIsConnected(false);
+      setError(null);
+    }
   }, []);
 
   // Sincronizar dados para o Firebase
   const syncToFirebase = async () => {
     if (!database || !userId || !isConnected) {
-      setError('Não conectado ao Firebase');
+      if (!database) {
+        setError('Firebase não configurado');
+      } else {
+        setError('Não conectado ao Firebase');
+      }
       return false;
     }
 
@@ -59,7 +71,11 @@ export function useFirebaseSync(userId, data, updateData) {
   // Sincronizar dados do Firebase
   const syncFromFirebase = async () => {
     if (!database || !userId || !isConnected) {
-      setError('Não conectado ao Firebase');
+      if (!database) {
+        setError('Firebase não configurado');
+      } else {
+        setError('Não conectado ao Firebase');
+      }
       return false;
     }
 
@@ -104,46 +120,63 @@ export function useFirebaseSync(userId, data, updateData) {
   useEffect(() => {
     if (!database || !userId || !isConnected || syncRef.current) return;
 
-    syncRef.current = true;
-    const dataRef = ref(database, `users/${userId}/data`);
-    
-    listenerRef.current = onValue(dataRef, (snapshot) => {
-      if (snapshot.exists()) {
-        const remoteData = snapshot.val();
-        const localTimestamp = data?.lastUpdated || 0;
-        const remoteTimestamp = remoteData?.lastUpdated || 0;
-        
-        // Só atualizar se os dados remotos forem mais recentes e não vierem desta instância
-        if (remoteTimestamp > localTimestamp && !isSyncing) {
-          delete remoteData.lastUpdated;
-          updateData(remoteData);
-          setLastSync(new Date());
+    try {
+      syncRef.current = true;
+      const dataRef = ref(database, `users/${userId}/data`);
+      
+      listenerRef.current = onValue(dataRef, (snapshot) => {
+        try {
+          if (snapshot.exists()) {
+            const remoteData = snapshot.val();
+            const localTimestamp = data?.lastUpdated || 0;
+            const remoteTimestamp = remoteData?.lastUpdated || 0;
+            
+            // Só atualizar se os dados remotos forem mais recentes e não vierem desta instância
+            if (remoteTimestamp > localTimestamp && !isSyncing) {
+              delete remoteData.lastUpdated;
+              updateData(remoteData);
+              setLastSync(new Date());
+            }
+          }
+        } catch (err) {
+          console.error('Erro ao processar snapshot:', err);
         }
-      }
-    }, (error) => {
-      console.error('Erro ao escutar mudanças:', error);
-      setError('Erro ao escutar mudanças: ' + error.message);
-    });
+      }, (error) => {
+        console.error('Erro ao escutar mudanças:', error);
+        setError('Erro ao escutar mudanças: ' + error.message);
+      });
 
-    return () => {
-      if (listenerRef.current) {
-        off(dataRef, 'value', listenerRef.current);
-        listenerRef.current = null;
-      }
+      return () => {
+        try {
+          if (listenerRef.current && dataRef) {
+            off(dataRef, 'value', listenerRef.current);
+            listenerRef.current = null;
+          }
+          syncRef.current = false;
+        } catch (err) {
+          console.error('Erro ao limpar listener:', err);
+        }
+      };
+    } catch (err) {
+      console.error('Erro ao configurar listener:', err);
       syncRef.current = false;
-    };
+    }
   }, [database, userId, isConnected, data, updateData, isSyncing]);
 
   // Sincronizar automaticamente quando os dados mudarem localmente
   useEffect(() => {
-    if (!isConnected || !userId || syncRef.current) return;
+    if (!isConnected || !userId || syncRef.current || !database) return;
     
-    const timer = setTimeout(() => {
-      syncToFirebase();
-    }, 2000); // Aguardar 2 segundos após a última mudança
+    try {
+      const timer = setTimeout(() => {
+        syncToFirebase();
+      }, 2000); // Aguardar 2 segundos após a última mudança
 
-    return () => clearTimeout(timer);
-  }, [data, isConnected, userId]);
+      return () => clearTimeout(timer);
+    } catch (err) {
+      console.error('Erro ao configurar sync automático:', err);
+    }
+  }, [data, isConnected, userId, database]);
 
   return {
     isConnected,

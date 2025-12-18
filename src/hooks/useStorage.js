@@ -6,28 +6,179 @@ export function useStorage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Carregar dados iniciais
-    const loadedData = storage.load();
-    
-    // Migrar dados antigos: converter workout (string) para activities (array)
-    if (loadedData.planner) {
-      let needsUpdate = false;
-      loadedData.planner.forEach(day => {
-        if (day.workout && !day.activities) {
-          day.activities = [day.workout];
-          delete day.workout;
-          needsUpdate = true;
-        } else if (!day.activities) {
-          day.activities = [];
+    try {
+      // Carregar dados iniciais
+      const loadedData = storage.load();
+      
+      // Garantir estrutura básica
+      if (!loadedData) {
+        const defaultData = {
+          checklist: [],
+          planner: [],
+          recipes: [],
+          shoppingList: [],
+          history: [],
+          activities: {},
+          dailyHabits: [],
+          ingredients: null,
+          customChecklistItems: null
+        };
+        setData(defaultData);
+        setLoading(false);
+        return;
+      }
+      
+      // Limpar atividades e hábitos dos dados antigos
+      if (loadedData.planner && Array.isArray(loadedData.planner)) {
+        let needsUpdate = false;
+        loadedData.planner.forEach(day => {
+          if (day.activities) {
+            delete day.activities;
+            needsUpdate = true;
+          }
+          if (day.workout) {
+            delete day.workout;
+            needsUpdate = true;
+          }
+        });
+        if (needsUpdate) {
+          storage.save(loadedData);
         }
-      });
+      }
+      
+      // Remover activities e dailyHabits do objeto principal
+      if (loadedData.activities) {
+        delete loadedData.activities;
+        storage.save(loadedData);
+      }
+      if (loadedData.dailyHabits) {
+        delete loadedData.dailyHabits;
+        storage.save(loadedData);
+      }
+      
+      // Garantir que checklist é um array e tem itens para os próximos dias
+      if (!Array.isArray(loadedData.checklist)) {
+        loadedData.checklist = [];
+      }
+      
+      // Garantir que customChecklistItems existe e tem os itens padrões
+      const defaultChecklistItems = [
+        { key: 'cafe', label: 'Café da manhã', icon: '☕', max: 1 },
+        { key: 'lancheManha', label: 'Lanche da manhã', icon: '🍎', max: 1 },
+        { key: 'almoco', label: 'Almoço', icon: '🍽️', max: 1 },
+        { key: 'lancheTarde', label: 'Lanche da tarde', icon: '🥗', max: 1 },
+        { key: 'jantar', label: 'Jantar', icon: '🍲', max: 1 },
+        { key: 'posTreino', label: 'Pós-treino', icon: '🥤', max: 1 },
+        { key: 'creatina', label: 'Creatina', icon: '💊', max: 1 }
+      ];
+      
+      if (!loadedData.customChecklistItems || !Array.isArray(loadedData.customChecklistItems) || loadedData.customChecklistItems.length === 0) {
+        loadedData.customChecklistItems = [...defaultChecklistItems];
+        storage.save(loadedData);
+      } else {
+        // Garantir que todos os itens padrões estejam presentes
+        const defaultKeys = defaultChecklistItems.map(item => item.key);
+        const existingKeys = loadedData.customChecklistItems.map(item => item.key);
+        const missingKeys = defaultKeys.filter(key => !existingKeys.includes(key));
+        
+        if (missingKeys.length > 0) {
+          const missingItems = defaultChecklistItems.filter(item => missingKeys.includes(item.key));
+          loadedData.customChecklistItems = [...loadedData.customChecklistItems, ...missingItems];
+          storage.save(loadedData);
+        }
+      }
+      
+      // Garantir que há dias no checklist para os próximos 14 dias
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      let needsUpdate = false;
+      
+      for (let i = 0; i < 14; i++) {
+        const date = new Date(today);
+        date.setDate(today.getDate() + i);
+        const dateStr = date.toISOString().split('T')[0];
+        
+        const dayExists = loadedData.checklist.find(d => d.date === dateStr);
+        if (!dayExists) {
+          if (!needsUpdate) {
+            needsUpdate = true;
+          }
+          loadedData.checklist.push({
+            date: dateStr,
+            items: {
+              cafe: 0,
+              lancheManha: 0,
+              almoco: 0,
+              lancheTarde: 0,
+              jantar: 0,
+              posTreino: 0,
+              creatina: 0,
+              agua: 0
+            }
+          });
+        } else {
+          // Garantir que o dia tem a estrutura correta de items
+          if (!dayExists.items) {
+            dayExists.items = {
+              cafe: 0,
+              lancheManha: 0,
+              almoco: 0,
+              lancheTarde: 0,
+              jantar: 0,
+              posTreino: 0,
+              creatina: 0,
+              agua: 0
+            };
+            needsUpdate = true;
+          } else {
+            // Garantir que todos os itens padrões existem no dia
+            const defaultKeys = ['cafe', 'lancheManha', 'almoco', 'lancheTarde', 'jantar', 'posTreino', 'creatina', 'agua'];
+            defaultKeys.forEach(key => {
+              if (dayExists.items[key] === undefined || dayExists.items[key] === null) {
+                dayExists.items[key] = key === 'agua' ? 0 : 0;
+                needsUpdate = true;
+              }
+            });
+          }
+        }
+      }
+      
+      // Ordenar checklist por data
+      loadedData.checklist.sort((a, b) => new Date(a.date) - new Date(b.date));
+      
       if (needsUpdate) {
         storage.save(loadedData);
       }
+      if (!Array.isArray(loadedData.planner)) {
+        loadedData.planner = [];
+      }
+      if (!Array.isArray(loadedData.recipes)) {
+        loadedData.recipes = [];
+      }
+      if (!Array.isArray(loadedData.shoppingList)) {
+        loadedData.shoppingList = [];
+      }
+      if (!Array.isArray(loadedData.history)) {
+        loadedData.history = [];
+      }
+      
+      setData(loadedData);
+      setLoading(false);
+    } catch (error) {
+      console.error('Erro ao carregar dados:', error);
+      // Dados padrão em caso de erro
+      const defaultData = {
+        checklist: [],
+        planner: [],
+        recipes: [],
+        shoppingList: [],
+        history: [],
+        ingredients: null,
+        customChecklistItems: null
+      };
+      setData(defaultData);
+      setLoading(false);
     }
-    
-    setData(loadedData);
-    setLoading(false);
   }, []);
 
   const updateData = (newData) => {
@@ -37,11 +188,30 @@ export function useStorage() {
   };
 
   const updateChecklist = (date, item, checked) => {
-    const updated = { ...data };
-    const dayIndex = updated.checklist.findIndex(d => d.date === date);
+    if (!data) return;
+    const updated = JSON.parse(JSON.stringify(data)); // Deep copy para evitar mutação
+    let dayIndex = updated.checklist.findIndex(d => d && d.date === date);
+    
+    // Se o dia não existe, criar
+    if (dayIndex === -1) {
+      updated.checklist.push({
+        date: date,
+        items: {}
+      });
+      dayIndex = updated.checklist.length - 1;
+    }
+    
     if (dayIndex !== -1) {
+      if (!updated.checklist[dayIndex].items) {
+        updated.checklist[dayIndex].items = {};
+      }
+      // Se o valor for 0, podemos definir como 0 ou remover a propriedade
+      // Vamos definir como 0 para manter consistência
       updated.checklist[dayIndex].items[item] = checked;
-      updateData(updated);
+      
+      // Salvar e atualizar estado
+      storage.save(updated);
+      setData(updated);
     }
   };
 

@@ -1,7 +1,7 @@
 import { useState } from 'react';
-import { getDayProgress, getProgressColor, calculateDayProgressWithHabits } from '../utils/calculations';
+import { getDayProgress, getProgressColor, calculateDayProgress } from '../utils/calculations';
 
-export default function Calendar({ checklist, dailyHabits = [], onDateSelect }) {
+export default function Calendar({ checklist, onDateSelect }) {
   const [currentDate, setCurrentDate] = useState(new Date());
   const year = currentDate.getFullYear();
   const month = currentDate.getMonth();
@@ -85,9 +85,8 @@ export default function Calendar({ checklist, dailyHabits = [], onDateSelect }) 
           const day = i + 1;
           const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
           const dayData = checklist.find(d => d.date === dateStr);
-          const habits = dayData?.habits || {};
           const progress = dayData 
-            ? calculateDayProgressWithHabits(dayData.items, habits, dailyHabits)
+            ? calculateDayProgress(dayData.items)
             : 0;
           const color = getProgressColor(progress);
           const isToday = isCurrentMonth && day === todayDate;

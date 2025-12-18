@@ -284,6 +284,15 @@ export default function Planner() {
     }
   };
 
+  // Obter itens do checklist para verificar quais refeições estão disponíveis
+  const customChecklistItems = data.customChecklistItems || [];
+  
+  // Função para verificar se uma refeição está no checklist (definida, não necessariamente marcada)
+  const isMealInChecklist = (mealType) => {
+    // Verificar se a refeição existe na lista de itens do checklist
+    return customChecklistItems.some(item => item.key === mealType);
+  };
+
   // Obter dia selecionado com tratamento de erro
   let selectedDay;
   try {
@@ -1089,12 +1098,20 @@ export default function Planner() {
           
         </div>
 
-        {/* Refeições */}
+        {/* Refeições - mostrar todas as que estão no checklist */}
         <div className="space-y-4">
-          {Object.entries(mealTimes).map(([mealType, time]) => {
-            if (mealType === 'posTreino' && !time) return null;
-            return renderMealSelection(mealType, time);
-          })}
+          {customChecklistItems
+            .filter(item => {
+              // Filtrar apenas refeições padrão (cafe, lancheManha, etc) e não mostrar creatina e agua
+              const mealTypes = ['cafe', 'lancheManha', 'almoco', 'lancheTarde', 'jantar', 'posTreino'];
+              return mealTypes.includes(item.key);
+            })
+            .map((item) => {
+              const mealType = item.key;
+              const time = mealTimes[mealType];
+              if (mealType === 'posTreino' && !time) return null;
+              return renderMealSelection(mealType, time);
+            })}
         </div>
       </div>
     </div>

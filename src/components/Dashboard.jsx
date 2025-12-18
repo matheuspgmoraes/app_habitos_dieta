@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useStorage } from '../hooks/useStorage';
 import { useFirebaseSync } from '../hooks/useFirebaseSync';
-import { getCurrentDayData, calculateWeekProgress, calculateMonthProgress, calculateYearProgress, calculateDayProgressWithHabits } from '../utils/calculations';
+import { getCurrentDayData, calculateWeekProgress, calculateMonthProgress, calculateYearProgress } from '../utils/calculations';
 import Calendar from './Calendar';
 import ProgressCircle from './ProgressCircle';
 
@@ -250,38 +250,15 @@ export default function Dashboard() {
     return 0;
   };
 
-  const calculateHabitsProgress = (habits, dailyHabits) => {
-    if (!dailyHabits || dailyHabits.length === 0) return 0;
-    const completed = dailyHabits.filter(h => {
-      const value = habits[h.id];
-      if (h.type === 'boolean') return value === true;
-      if (h.type === 'quantity' || h.type === 'timesPerDay' || h.type === 'timesPerWeek') {
-        return (value || 0) >= h.target;
-      }
-      return false;
-    }).length;
-    return Math.round((completed / dailyHabits.length) * 100);
-  };
 
   const todayFoodProgress = todayData.checklist ? calculateFoodProgress(todayData.checklist.items, customChecklistItems) : 0;
-  const todayHabitsProgress = calculateHabitsProgress(todayHabits, dailyHabits);
   
   // Calcular semana, mês e ano com alimentação apenas
   const weekProgress = calculateWeekProgress(data.checklist, customChecklistItems);
   const monthProgress = calculateMonthProgress(data.checklist, today.getFullYear(), today.getMonth(), customChecklistItems);
   const yearProgress = calculateYearProgress(data.checklist, today.getFullYear(), customChecklistItems);
-  
-  // Atividades personalizadas - buscar do planner do dia
-  const activities = data.activities || {
-    vôlei: { name: 'Vôlei', icon: '🏐', time: '20:00' },
-    academia: { name: 'Academia', icon: '💪', time: null }
-  };
-  const todayActivities = todayData.planner?.activities || [];
-  const todayActivitiesData = todayActivities.map(id => activities[id]).filter(Boolean);
 
   const meals = todayData.planner?.meals || {};
-  const dailyHabits = data.dailyHabits || [];
-  const todayHabits = todayData.checklist?.habits || {};
 
   return (
     <div className="p-4 space-y-6 pb-20">
@@ -322,15 +299,11 @@ export default function Dashboard() {
             />
           </div>
         </div>
-        {/* Progresso separado do dia */}
-        <div className="grid grid-cols-2 gap-4 pt-4 border-t">
+        {/* Progresso do dia */}
+        <div className="pt-4 border-t">
           <div className="text-center">
             <div className="text-xs text-gray-600 mb-1">Alimentação</div>
             <div className="text-2xl font-bold" style={{ color: '#4f6d7a' }}>{todayFoodProgress}%</div>
-          </div>
-          <div className="text-center">
-            <div className="text-xs text-gray-600 mb-1">Hábitos</div>
-            <div className="text-2xl font-bold" style={{ color: '#4f6d7a' }}>{todayHabitsProgress}%</div>
           </div>
         </div>
       </div>
@@ -338,7 +311,6 @@ export default function Dashboard() {
       {/* Calendário Mensal */}
       <Calendar 
         checklist={data.checklist || []}
-        dailyHabits={dailyHabits}
         onDateSelect={(date) => setSelectedCalendarDate(date)}
       />
 
@@ -354,22 +326,7 @@ export default function Dashboard() {
         </div>
       )}
 
-      {/* Atividades do Dia */}
-      {todayActivitiesData.length > 0 && (
-        <div className="bg-white rounded-lg shadow p-4">
-          <h2 className="text-lg font-semibold mb-3">Atividades do Dia</h2>
-          <div className="space-y-2">
-            {todayActivitiesData.map((activity, idx) => (
-              <div key={idx} className="flex items-center gap-3 p-2 bg-gray-50 rounded-lg">
-                <span className="text-2xl">{activity.icon}</span>
-                <span className="font-medium">{activity.name}</span>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Alimentação e Hábitos */}
+      {/* Alimentação */}
       <div className="bg-white rounded-lg shadow">
         <div className="p-4">
           {/* Alimentação */}
@@ -468,71 +425,6 @@ export default function Dashboard() {
             </div>
           </div>
 
-          {/* Hábitos */}
-          <div className="border-t pt-6">
-            <div className="space-y-4">
-              <div className="flex justify-between items-center mb-3">
-                <h2 className="text-lg font-semibold">✨ Hábitos</h2>
-                <span className="text-xl font-bold" style={{ color: '#4f6d7a' }}>{todayHabitsProgress}%</span>
-              </div>
-              <div className="w-full rounded-full h-2 mb-3" style={{ backgroundColor: '#eaeaea' }}>
-                <div
-                  className="h-2 rounded-full transition-all"
-                  style={{ width: `${todayHabitsProgress}%`, backgroundColor: '#4f6d7a' }}
-                />
-              </div>
-              {dailyHabits.length === 0 ? (
-                <div className="text-center text-gray-500 py-8">
-                  Nenhum hábito cadastrado ainda.
-                </div>
-              ) : (
-                <div className="space-y-2">
-                  {dailyHabits.map(habit => {
-                    const value = todayHabits[habit.id];
-                    const isComplete = habit.type === 'boolean' 
-                      ? value === true
-                      : (value || 0) >= habit.target;
-
-                    return (
-                      <div
-                        key={habit.id}
-                        className={`flex items-center justify-between py-2 border-b last:border-0 ${
-                          isComplete ? 'text-green-600' : 'text-gray-700'
-                        }`}
-                      >
-                        <div className="flex items-center gap-2">
-                          <span className="text-xl">{habit.icon}</span>
-                          <div>
-                            <span className="font-medium">{habit.name}</span>
-                            {habit.type === 'quantity' && (
-                              <span className="text-sm text-gray-600 ml-2">
-                                ({value || 0} / {habit.target})
-                              </span>
-                            )}
-                            {habit.type === 'timesPerDay' && (
-                              <span className="text-sm text-gray-600 ml-2">
-                                ({value || 0} / {habit.target} vezes hoje)
-                              </span>
-                            )}
-                            {habit.type === 'timesPerWeek' && (
-                              <span className="text-sm text-gray-600 ml-2">
-                                ({value || 0} / {habit.target} vezes na semana)
-                              </span>
-                            )}
-                          </div>
-                        </div>
-                        {isComplete ? (
-                          <span className="text-green-600 font-bold">✓</span>
-                        ) : (
-                          <span className="text-gray-400">○</span>
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
-          </div>
         </div>
       </div>
     </div>
