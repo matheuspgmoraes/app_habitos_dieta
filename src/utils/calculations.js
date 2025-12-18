@@ -44,15 +44,18 @@ export function calculateDayProgress(checklistItems, customItems = null) {
 export function calculateWeekProgress(checklist, customItems = null) {
   if (!checklist || checklist.length === 0) return 0;
   
-  // Obter apenas os últimos 7 dias
+  // Obter apenas os últimos 7 dias (semana atual)
   const today = new Date();
+  today.setHours(0, 0, 0, 0);
   const weekStart = new Date(today);
   weekStart.setDate(today.getDate() - today.getDay()); // Domingo da semana
-  weekStart.setHours(0, 0, 0, 0);
+  const weekEnd = new Date(weekStart);
+  weekEnd.setDate(weekStart.getDate() + 7);
   
   const weekDays = checklist.filter(day => {
     const dayDate = new Date(day.date);
-    return dayDate >= weekStart && dayDate < new Date(weekStart.getTime() + 7 * 24 * 60 * 60 * 1000);
+    dayDate.setHours(0, 0, 0, 0);
+    return dayDate >= weekStart && dayDate < weekEnd;
   });
   
   if (weekDays.length === 0) return 0;
@@ -73,8 +76,13 @@ export function calculateMonthProgress(checklist, year, month, customItems = nul
   if (!checklist || checklist.length === 0) return 0;
   
   const monthDays = checklist.filter(day => {
-    const date = new Date(day.date);
-    return date.getFullYear() === year && date.getMonth() === month;
+    try {
+      const date = new Date(day.date);
+      // Garantir que estamos comparando corretamente
+      return date.getFullYear() === year && date.getMonth() === month;
+    } catch (e) {
+      return false;
+    }
   });
   
   if (monthDays.length === 0) return 0;
@@ -95,8 +103,13 @@ export function calculateYearProgress(checklist, year, customItems = null) {
   if (!checklist || checklist.length === 0) return 0;
   
   const yearDays = checklist.filter(day => {
-    const date = new Date(day.date);
-    return date.getFullYear() === year;
+    try {
+      const date = new Date(day.date);
+      // Garantir que estamos comparando corretamente
+      return date.getFullYear() === year;
+    } catch (e) {
+      return false;
+    }
   });
   
   if (yearDays.length === 0) return 0;

@@ -8,7 +8,7 @@ export default function Checklist() {
   const { data, updateChecklist, updateData } = useStorage();
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
   const [showHistory, setShowHistory] = useState(false);
-  const [activeTab, setActiveTab] = useState('alimentacao'); // 'alimentacao' ou 'habitos'
+  // Removido activeTab - só mostrar alimentação
   const [showHabitsEditor, setShowHabitsEditor] = useState(false);
   const [showFoodEditor, setShowFoodEditor] = useState(false);
   const [actionHistory, setActionHistory] = useState([]); // Histórico de ações para desfazer
@@ -274,35 +274,11 @@ export default function Checklist() {
         </div>
       </div>
 
-      {/* Abas */}
+      {/* Alimentação */}
       <div className="bg-white rounded-lg shadow">
-        <div className="flex border-b">
-          <button
-            onClick={() => setActiveTab('alimentacao')}
-            className={`flex-1 px-4 py-3 text-center font-medium transition-all border-b-2 ${
-              activeTab === 'alimentacao'
-                ? 'bg-[#c0d6df] text-[#4f6d7a] border-[#dd6e42]'
-                : 'text-gray-600 border-transparent hover:bg-[#eaeaea]'
-            }`}
-          >
-            🍽️ Alimentação
-          </button>
-          <button
-            onClick={() => setActiveTab('habitos')}
-            className={`flex-1 px-4 py-3 text-center font-medium transition-all border-b-2 ${
-              activeTab === 'habitos'
-                ? 'bg-[#c0d6df] text-[#4f6d7a] border-[#dd6e42]'
-                : 'text-gray-600 border-transparent hover:bg-[#eaeaea]'
-            }`}
-          >
-            ✨ Hábitos
-          </button>
-        </div>
-
         <div className="p-4">
-          {/* Tab Alimentação */}
-          {activeTab === 'alimentacao' && (
-            <div className="space-y-4">
+          {/* Alimentação */}
+          <div className="space-y-4">
               <div className="flex justify-between items-center mb-4">
                 <h2 className="text-lg font-semibold">
                   {new Date(selectedDate).toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' })}
@@ -430,16 +406,30 @@ export default function Checklist() {
                   // Se max é 1, usar checkbox
                   const isCheckbox = (item.max || 1) === 1;
                   return (
-                    <DraggableProgressBar
-                      key={item.key}
-                      value={value}
-                      max={item.max || 1}
-                      onChange={(newValue) => handleProgressChange(item.key, newValue)}
-                      label={item.label}
-                      icon={item.icon}
-                      itemKey={item.key}
-                      isCheckbox={isCheckbox}
-                    />
+                    <div key={item.key} className="relative">
+                      <DraggableProgressBar
+                        value={value}
+                        max={item.max || 1}
+                        onChange={(newValue) => handleProgressChange(item.key, newValue)}
+                        label={item.label}
+                        icon={item.icon}
+                        itemKey={item.key}
+                        isCheckbox={isCheckbox}
+                      />
+                      {value > 0 && (
+                        <button
+                          onClick={() => {
+                            if (confirm(`Remover ${item.label} apenas deste dia?`)) {
+                              handleProgressChange(item.key, 0);
+                            }
+                          }}
+                          className="absolute top-0 right-0 px-2 py-1 text-xs text-red-600 hover:text-red-800"
+                          title="Remover apenas deste dia"
+                        >
+                          ×
+                        </button>
+                      )}
+                    </div>
                   );
                 })}
 
@@ -459,223 +449,6 @@ export default function Checklist() {
                 </div>
               </div>
             </div>
-          )}
-
-          {/* Tab Hábitos */}
-          {activeTab === 'habitos' && (
-            <div className="space-y-4">
-              <div className="flex justify-between items-center mb-4">
-                <h2 className="text-lg font-semibold">
-                  {new Date(selectedDate).toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' })}
-                </h2>
-                <button
-                  onClick={() => setShowHabitsEditor(!showHabitsEditor)}
-                  className="px-3 py-1 text-white rounded-lg text-sm font-medium"
-                  style={{ backgroundColor: '#4f6d7a' }}
-                  onMouseEnter={(e) => e.target.style.backgroundColor = '#dd6e42'}
-                  onMouseLeave={(e) => e.target.style.backgroundColor = '#4f6d7a'}
-                >
-                  {showHabitsEditor ? 'Fechar' : '+ Novo'}
-                </button>
-              </div>
-
-              {/* Editor de Hábitos */}
-              {showHabitsEditor && (
-                <div className="bg-gray-50 rounded-lg p-4 mb-4 border border-gray-200">
-                  <h3 className="font-semibold mb-3">Adicionar Hábito</h3>
-                  <div className="space-y-3">
-                    <div className="flex gap-2">
-                      <input
-                        type="text"
-                        value={newHabit.icon}
-                        onChange={(e) => setNewHabit({ ...newHabit, icon: e.target.value })}
-                        placeholder="Emoji"
-                        className="w-16 px-2 py-2 border border-gray-300 rounded-lg text-center text-xl"
-                        maxLength="2"
-                      />
-                      <input
-                        type="text"
-                        value={newHabit.name}
-                        onChange={(e) => setNewHabit({ ...newHabit, name: e.target.value })}
-                        placeholder="Nome do hábito"
-                        className="flex-1 px-3 py-2 border border-gray-300 rounded-lg"
-                      />
-                    </div>
-                    <select
-                      value={newHabit.type}
-                      onChange={(e) => setNewHabit({ ...newHabit, type: e.target.value, target: 1 })}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg"
-                    >
-                      <option value="boolean">Sim/Não (checkbox)</option>
-                      <option value="quantity">Por quantidade</option>
-                      <option value="timesPerDay">Vezes por dia</option>
-                      <option value="timesPerWeek">Vezes por semana</option>
-                    </select>
-                    {(newHabit.type === 'quantity' || newHabit.type === 'timesPerDay' || newHabit.type === 'timesPerWeek') && (
-                      <input
-                        type="number"
-                        value={newHabit.target}
-                        onChange={(e) => setNewHabit({ ...newHabit, target: parseInt(e.target.value) || 1 })}
-                        placeholder="Meta"
-                        min="1"
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg"
-                      />
-                    )}
-                    <button
-                      onClick={handleAddHabit}
-                      className="w-full px-4 py-2 text-white rounded-lg font-medium"
-                      style={{ backgroundColor: '#4f6d7a' }}
-                      onMouseEnter={(e) => e.target.style.backgroundColor = '#dd6e42'}
-                      onMouseLeave={(e) => e.target.style.backgroundColor = '#4f6d7a'}
-                    >
-                      Adicionar
-                    </button>
-                  </div>
-                </div>
-              )}
-
-              {/* Lista de Hábitos */}
-              {dailyHabits.length === 0 ? (
-                <div className="text-center text-gray-500 py-8">
-                  Nenhum hábito cadastrado. Clique em "+ Novo" para adicionar.
-                </div>
-              ) : (
-                <div className="space-y-3">
-                  {dailyHabits.map(habit => {
-                    const currentValue = habitsProgress[habit.id] || 0;
-                    const isComplete = habit.type === 'boolean' 
-                      ? currentValue === true
-                      : currentValue >= habit.target;
-
-                    return (
-                      <div
-                        key={habit.id}
-                        className={`p-3 rounded-lg border-2 ${
-                          isComplete
-                            ? 'bg-[#c0d6df] border-[#4f6d7a]'
-                            : 'bg-[#eaeaea] border-gray-300'
-                        }`}
-                      >
-                        <div className="flex items-center justify-between mb-2">
-                          <div className="flex items-center gap-2">
-                            <span className="text-xl">{habit.icon}</span>
-                            <span className="font-medium">{habit.name}</span>
-                          </div>
-                          <button
-                            onClick={() => handleDeleteHabit(habit.id)}
-                            className="px-2 py-1 bg-red-600 text-white rounded text-xs hover:bg-red-700"
-                          >
-                            ×
-                          </button>
-                        </div>
-
-                        {/* Controles baseados no tipo */}
-                        {habit.type === 'boolean' && (
-                          <button
-                            onClick={() => handleHabitChange(habit.id, !currentValue)}
-                            className={`w-full px-3 py-2 rounded-lg font-medium ${
-                              currentValue
-                                ? 'text-white'
-                                : 'bg-[#eaeaea] text-gray-700'
-                            }`}
-                            style={currentValue ? { backgroundColor: '#4f6d7a' } : {}}
-                          >
-                            {currentValue ? '✓ Feito' : 'Marcar como feito'}
-                          </button>
-                        )}
-
-                        {habit.type === 'quantity' && (
-                          <div>
-                            <div className="flex items-center justify-between mb-2">
-                              <span className="text-sm text-gray-600">Quantidade: {currentValue} / {habit.target}</span>
-                              <span className={`text-sm font-bold ${isComplete ? 'text-green-600' : 'text-gray-600'}`}>
-                                {isComplete ? '✓' : ''}
-                              </span>
-                            </div>
-                            <div className="flex gap-2">
-                              <button
-                                onClick={() => handleHabitChange(habit.id, Math.max(0, currentValue - 1))}
-                                className="px-3 py-1 bg-gray-200 rounded"
-                              >
-                                -
-                              </button>
-                              <input
-                                type="number"
-                                value={currentValue}
-                                onChange={(e) => handleHabitChange(habit.id, parseInt(e.target.value) || 0)}
-                                min="0"
-                                max={habit.target * 2}
-                                className="flex-1 px-3 py-1 border border-gray-300 rounded text-center"
-                              />
-                              <button
-                                onClick={() => handleHabitChange(habit.id, currentValue + 1)}
-                                className="px-3 py-1 bg-gray-200 rounded"
-                              >
-                                +
-                              </button>
-                            </div>
-                          </div>
-                        )}
-
-                        {habit.type === 'timesPerDay' && (
-                          <div>
-                            <div className="flex items-center justify-between mb-2">
-                              <span className="text-sm text-gray-600">Vezes hoje: {currentValue} / {habit.target}</span>
-                              <span className={`text-sm font-bold ${isComplete ? 'text-green-600' : 'text-gray-600'}`}>
-                                {isComplete ? '✓' : ''}
-                              </span>
-                            </div>
-                            <div className="flex gap-2">
-                              <button
-                                onClick={() => handleHabitChange(habit.id, Math.max(0, currentValue - 1))}
-                                className="px-3 py-1 bg-gray-200 rounded"
-                              >
-                                -
-                              </button>
-                              <input
-                                type="number"
-                                value={currentValue}
-                                onChange={(e) => handleHabitChange(habit.id, parseInt(e.target.value) || 0)}
-                                min="0"
-                                max={habit.target * 2}
-                                className="flex-1 px-3 py-1 border border-gray-300 rounded text-center"
-                              />
-                              <button
-                                onClick={() => handleHabitChange(habit.id, currentValue + 1)}
-                                className="px-3 py-1 bg-gray-200 rounded"
-                              >
-                                +
-                              </button>
-                            </div>
-                          </div>
-                        )}
-
-                        {habit.type === 'timesPerWeek' && (
-                          <div>
-                            <div className="flex items-center justify-between mb-2">
-                              <span className="text-sm text-gray-600">Vezes na semana: {currentValue} / {habit.target}</span>
-                              <span className={`text-sm font-bold ${isComplete ? 'text-green-600' : 'text-gray-600'}`}>
-                                {isComplete ? '✓' : ''}
-                              </span>
-                            </div>
-                            <button
-                              onClick={() => handleHabitChange(habit.id, currentValue + 1)}
-                              className="w-full px-3 py-2 text-white rounded-lg font-medium"
-                              style={{ backgroundColor: '#4f6d7a' }}
-                              onMouseEnter={(e) => e.target.style.backgroundColor = '#dd6e42'}
-                              onMouseLeave={(e) => e.target.style.backgroundColor = '#4f6d7a'}
-                            >
-                              +1 vez esta semana
-                            </button>
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
-          )}
         </div>
       </div>
     </div>

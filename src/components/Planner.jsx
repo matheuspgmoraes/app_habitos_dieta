@@ -44,6 +44,7 @@ export default function Planner() {
   const { data, updatePlanner, updateData } = useStorage();
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
   const [mealMode, setMealMode] = useState({}); // { mealType: 'recipe' | 'individual' }
+  const [expandedMeals, setExpandedMeals] = useState({});
   const processedDatesRef = useRef(new Set()); // Rastrear datas já processadas
   const [error, setError] = useState(null);
 
@@ -540,45 +541,80 @@ export default function Planner() {
     }
   };
 
+  const toggleMeal = (mealType) => {
+    setExpandedMeals(prev => ({
+      ...prev,
+      [mealType]: !prev[mealType]
+    }));
+  };
+
   // Renderizar seleção de refeição
   const renderMealSelection = (mealType, time) => {
     const currentMode = getMealMode(mealType);
     const meal = selectedDay?.meals[mealType] || { time, items: [] };
+    const isExpanded = expandedMeals[mealType] || false;
+    
+    // Calcular porcentagem de completude
+    const hasRecipe = meal.recipeId && meal.recipeName;
+    const hasItems = meal.items && meal.items.length > 0;
+    const mealProgress = hasRecipe || hasItems ? 100 : 0;
 
     return (
-      <div key={mealType} className="border-b pb-4 last:border-0 space-y-3">
-        <div className="flex items-center justify-between">
-          <label className="block text-sm font-medium text-gray-700">
-            {mealLabels[mealType]} - {time}
-          </label>
-        </div>
+      <div key={mealType} className="border border-gray-200 rounded-lg overflow-hidden">
+        <button
+          onClick={() => toggleMeal(mealType)}
+          className="w-full flex items-center justify-between p-3 bg-gray-50 hover:bg-gray-100 transition-colors"
+        >
+          <div className="flex items-center gap-3 flex-1">
+            <span className="text-lg">{mealLabels[mealType] === 'Café da manhã' ? '☕' : mealLabels[mealType] === 'Almoço' ? '🍽️' : mealLabels[mealType] === 'Jantar' ? '🍲' : mealLabels[mealType] === 'Lanche da manhã' ? '🍎' : mealLabels[mealType] === 'Lanche da tarde' ? '🥗' : '🥤'}</span>
+            <div className="flex-1 text-left">
+              <div className="font-medium text-gray-700">{mealLabels[mealType]}</div>
+              <div className="text-xs text-gray-500">{time}</div>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="w-16 h-2 bg-gray-200 rounded-full overflow-hidden">
+                <div 
+                  className="h-full transition-all"
+                  style={{ 
+                    width: `${mealProgress}%`, 
+                    backgroundColor: mealProgress === 100 ? '#4f6d7a' : '#c0d6df' 
+                  }}
+                />
+              </div>
+              <span className="text-xs font-medium text-gray-600 w-8 text-right">{mealProgress}%</span>
+            </div>
+          </div>
+          <span className="ml-2 text-gray-400">{isExpanded ? '▼' : '▶'}</span>
+        </button>
+        
+        {isExpanded && (
+          <div className="p-4 space-y-3 bg-white border-t">
+            {/* Seleção de receita - sempre visível */}
+            <div className="space-y-2">
+              <label className="block text-xs font-medium text-gray-600 mb-1">Receita (opcional)</label>
+              <select
+                value={meal.recipeId || ''}
+                onChange={(e) => handleRecipeSelect(mealType, e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#4f6d7a] focus:border-[#4f6d7a]"
+              >
+                <option value="">Nenhuma receita</option>
+                {data.recipes.map(recipe => (
+                  <option key={recipe.id} value={recipe.id}>{recipe.name}</option>
+                ))}
+              </select>
+              {meal.recipeName && (
+                <p className="text-sm text-gray-600 p-2 rounded" style={{ backgroundColor: '#c0d6df' }}>
+                  ✓ {meal.recipeName}
+                </p>
+              )}
+            </div>
 
-        {/* Seleção de receita - sempre visível */}
-        <div className="space-y-2">
-          <label className="block text-xs font-medium text-gray-600 mb-1">Receita (opcional)</label>
-          <select
-            value={meal.recipeId || ''}
-            onChange={(e) => handleRecipeSelect(mealType, e.target.value)}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#4f6d7a] focus:border-[#4f6d7a]"
-          >
-            <option value="">Nenhuma receita</option>
-            {data.recipes.map(recipe => (
-              <option key={recipe.id} value={recipe.id}>{recipe.name}</option>
-            ))}
-          </select>
-          {meal.recipeName && (
-            <p className="text-sm text-gray-600 p-2 rounded" style={{ backgroundColor: '#c0d6df' }}>
-              ✓ {meal.recipeName}
-            </p>
-          )}
-        </div>
-
-        {/* Seleção de itens individuais - sempre visível */}
-        <div className="space-y-3">
-          <label className="block text-xs font-medium text-gray-600 mb-1">Ingredientes Adicionais</label>
-          <div className="space-y-3">
-            {/* Converter items para formato normalizado */}
-            {(() => {
+            {/* Seleção de itens individuais - sempre visível */}
+            <div className="space-y-3">
+              <label className="block text-xs font-medium text-gray-600 mb-1">Ingredientes Adicionais</label>
+              <div className="space-y-3">
+                {/* Converter items para formato normalizado */}
+                {(() => {
               const normalizedItems = (meal.items || []).map(item => 
                 typeof item === 'string' ? { id: item, quantity: 1 } : item
               );
@@ -1000,8 +1036,10 @@ export default function Planner() {
                 </>
               );
             })()}
+              </div>
+            </div>
           </div>
-        </div>
+        )}
       </div>
     );
   };

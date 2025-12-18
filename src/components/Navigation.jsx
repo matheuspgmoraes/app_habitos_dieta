@@ -3,8 +3,7 @@ export default function Navigation({ currentPage, onNavigate }) {
     { id: 'dashboard', label: 'Dashboard' },
     { id: 'planner', label: 'Planner' },
     { id: 'checklist', label: 'Checklist' },
-    { id: 'recipes-more', label: 'Alimentação' },
-    { id: 'activities', label: 'Atividades' }
+    { id: 'recipes-more', label: 'Alimentação' }
   ];
 
   return (

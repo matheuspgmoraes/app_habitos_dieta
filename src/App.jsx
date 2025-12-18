@@ -52,8 +52,6 @@ function App() {
         return <Checklist />;
       case 'recipes-more':
         return <RecipesAndMore />;
-      case 'activities':
-        return <Activities />;
       default:
         return <Dashboard />;
     }

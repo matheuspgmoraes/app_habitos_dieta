@@ -215,7 +215,6 @@ function SyncData({ data, updateData }) {
 export default function Dashboard() {
   const { data, loading, updateData } = useStorage();
   const [selectedCalendarDate, setSelectedCalendarDate] = useState(null);
-  const [activeTab, setActiveTab] = useState('alimentacao'); // 'alimentacao' ou 'habitos'
 
   if (loading || !data) {
     return <div className="p-4">Carregando...</div>;
@@ -225,6 +224,49 @@ export default function Dashboard() {
   const dayOfWeek = today.getDay();
   const todayData = getCurrentDayData(data.checklist, data.planner);
   const customChecklistItems = data.customChecklistItems || [];
+  
+  // Calcular progresso de alimentação separadamente
+  const calculateFoodProgress = (checklistItems, customItems) => {
+    if (!checklistItems) return 0;
+    if (customItems && customItems.length > 0) {
+      let totalProgress = 0;
+      let itemsCount = 0;
+      const waterValue = checklistItems['agua'] || 0;
+      if (waterValue !== undefined) {
+        const waterProgress = Math.min((waterValue / 3000) * 100, 100);
+        totalProgress += waterProgress;
+        itemsCount += 1;
+      }
+      customItems.forEach(item => {
+        if (item.key === 'agua') return;
+        const value = checklistItems[item.key] || 0;
+        const max = item.max || 1;
+        const itemProgress = value >= max ? 100 : 0;
+        totalProgress += itemProgress;
+        itemsCount += 1;
+      });
+      return itemsCount > 0 ? Math.round(totalProgress / itemsCount) : 0;
+    }
+    return 0;
+  };
+
+  const calculateHabitsProgress = (habits, dailyHabits) => {
+    if (!dailyHabits || dailyHabits.length === 0) return 0;
+    const completed = dailyHabits.filter(h => {
+      const value = habits[h.id];
+      if (h.type === 'boolean') return value === true;
+      if (h.type === 'quantity' || h.type === 'timesPerDay' || h.type === 'timesPerWeek') {
+        return (value || 0) >= h.target;
+      }
+      return false;
+    }).length;
+    return Math.round((completed / dailyHabits.length) * 100);
+  };
+
+  const todayFoodProgress = todayData.checklist ? calculateFoodProgress(todayData.checklist.items, customChecklistItems) : 0;
+  const todayHabitsProgress = calculateHabitsProgress(todayHabits, dailyHabits);
+  
+  // Calcular semana, mês e ano com alimentação apenas
   const weekProgress = calculateWeekProgress(data.checklist, customChecklistItems);
   const monthProgress = calculateMonthProgress(data.checklist, today.getFullYear(), today.getMonth(), customChecklistItems);
   const yearProgress = calculateYearProgress(data.checklist, today.getFullYear(), customChecklistItems);
@@ -241,28 +283,6 @@ export default function Dashboard() {
   const dailyHabits = data.dailyHabits || [];
   const todayHabits = todayData.checklist?.habits || {};
 
-  // Calcular progresso de alimentação
-  const foodItems = ['cafe', 'lancheManha', 'almoco', 'lancheTarde', 'jantar', 'posTreino', 'creatina', 'agua'];
-  const foodCompleted = foodItems.filter(key => {
-    if (key === 'agua') {
-      return (todayData.checklist?.items?.agua || 0) >= 3;
-    }
-    return todayData.checklist?.items?.[key] || false;
-  }).length;
-  const foodProgress = Math.round((foodCompleted / foodItems.length) * 100);
-
-  // Calcular progresso de hábitos
-  const habitsProgress = dailyHabits.length > 0 
-    ? Math.round((dailyHabits.filter(h => {
-        const value = todayHabits[h.id];
-        if (h.type === 'boolean') return value === true;
-        if (h.type === 'quantity' || h.type === 'timesPerDay' || h.type === 'timesPerWeek') {
-          return (value || 0) >= h.target;
-        }
-        return false;
-      }).length / dailyHabits.length) * 100)
-    : 0;
-
   return (
     <div className="p-4 space-y-6 pb-20">
       <div className="flex justify-between items-center">
@@ -272,10 +292,10 @@ export default function Dashboard() {
 
       {/* Progresso - Círculos */}
       <div className="bg-white rounded-lg shadow p-4">
-        <div className="grid grid-cols-4 gap-4">
+        <div className="grid grid-cols-4 gap-4 mb-4">
           <div className="relative flex items-center justify-center">
             <ProgressCircle 
-              percentage={todayData.progress} 
+              percentage={todayFoodProgress} 
               label="Dia"
               size={70}
             />
@@ -300,6 +320,17 @@ export default function Dashboard() {
               label="Ano"
               size={70}
             />
+          </div>
+        </div>
+        {/* Progresso separado do dia */}
+        <div className="grid grid-cols-2 gap-4 pt-4 border-t">
+          <div className="text-center">
+            <div className="text-xs text-gray-600 mb-1">Alimentação</div>
+            <div className="text-2xl font-bold" style={{ color: '#4f6d7a' }}>{todayFoodProgress}%</div>
+          </div>
+          <div className="text-center">
+            <div className="text-xs text-gray-600 mb-1">Hábitos</div>
+            <div className="text-2xl font-bold" style={{ color: '#4f6d7a' }}>{todayHabitsProgress}%</div>
           </div>
         </div>
       </div>
@@ -338,43 +369,20 @@ export default function Dashboard() {
         </div>
       )}
 
-      {/* Abas Alimentação e Hábitos */}
+      {/* Alimentação e Hábitos */}
       <div className="bg-white rounded-lg shadow">
-        <div className="flex border-b">
-          <button
-            onClick={() => setActiveTab('alimentacao')}
-            className={`flex-1 px-4 py-3 text-center font-medium transition-all ${
-              activeTab === 'alimentacao'
-                ? 'bg-[#c0d6df] text-[#4f6d7a] border-b-2 border-[#4f6d7a]'
-                : 'text-gray-600 hover:bg-[#eaeaea]'
-            }`}
-          >
-            🍽️ Alimentação
-          </button>
-          <button
-            onClick={() => setActiveTab('habitos')}
-            className={`flex-1 px-4 py-3 text-center font-medium transition-all ${
-              activeTab === 'habitos'
-                ? 'bg-[#c0d6df] text-[#4f6d7a] border-b-2 border-[#4f6d7a]'
-                : 'text-gray-600 hover:bg-[#eaeaea]'
-            }`}
-          >
-            ✨ Hábitos
-          </button>
-        </div>
-
         <div className="p-4">
-          {/* Tab Alimentação */}
-          {activeTab === 'alimentacao' && (
+          {/* Alimentação */}
+          <div className="mb-6">
             <div className="space-y-4">
               <div className="flex justify-between items-center mb-3">
                 <h2 className="text-lg font-semibold">🍽️ Alimentação</h2>
-                <span className="text-xl font-bold" style={{ color: '#4f6d7a' }}>{foodProgress}%</span>
+                <span className="text-xl font-bold" style={{ color: '#4f6d7a' }}>{todayFoodProgress}%</span>
               </div>
               <div className="w-full rounded-full h-2 mb-3" style={{ backgroundColor: '#eaeaea' }}>
                 <div
                   className="h-2 rounded-full transition-all"
-                  style={{ width: `${foodProgress}%`, backgroundColor: '#4f6d7a' }}
+                  style={{ width: `${todayFoodProgress}%`, backgroundColor: '#4f6d7a' }}
                 />
               </div>
               <div className="space-y-2">
@@ -458,19 +466,19 @@ export default function Dashboard() {
                 )}
               </div>
             </div>
-          )}
+          </div>
 
-          {/* Tab Hábitos */}
-          {activeTab === 'habitos' && (
+          {/* Hábitos */}
+          <div className="border-t pt-6">
             <div className="space-y-4">
               <div className="flex justify-between items-center mb-3">
                 <h2 className="text-lg font-semibold">✨ Hábitos</h2>
-                <span className="text-xl font-bold" style={{ color: '#4f6d7a' }}>{habitsProgress}%</span>
+                <span className="text-xl font-bold" style={{ color: '#4f6d7a' }}>{todayHabitsProgress}%</span>
               </div>
               <div className="w-full rounded-full h-2 mb-3" style={{ backgroundColor: '#eaeaea' }}>
                 <div
                   className="h-2 rounded-full transition-all"
-                  style={{ width: `${habitsProgress}%`, backgroundColor: '#4f6d7a' }}
+                  style={{ width: `${todayHabitsProgress}%`, backgroundColor: '#4f6d7a' }}
                 />
               </div>
               {dailyHabits.length === 0 ? (
@@ -524,7 +532,7 @@ export default function Dashboard() {
                 </div>
               )}
             </div>
-          )}
+          </div>
         </div>
       </div>
     </div>
